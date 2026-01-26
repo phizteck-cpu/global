@@ -5,101 +5,97 @@ import { authenticateToken, isSuperAdmin, isOps } from '../middleware/auth.js';
 const prisma = new PrismaClient();
 const router = express.Router();
 
-// GET /packages - List Available Packages
+// GET /api/packages - List Available Membership Tiers
 router.get('/', async (req, res) => {
     try {
-        const packages = await prisma.package.findMany({
-            where: { isActive: true },
-            orderBy: { weeklyAmount: 'asc' }
+        const tiers = await prisma.tier.findMany({
+            orderBy: { onboardingFee: 'asc' }
         });
-        res.json(packages);
+        res.json(tiers);
     } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch packages' });
+        res.status(500).json({ error: 'Failed to fetch membership tiers' });
     }
 });
 
-// POST /packages/subscribe - Subscribe to Package
-router.post('/subscribe', authenticateToken, async (req, res) => {
+// POST /api/packages/upgrade - Upgrade Membership Tier
+router.post('/upgrade', authenticateToken, async (req, res) => {
     try {
-        const { packageId } = req.body;
+        const { tierId } = req.body;
         const userId = req.user.userId;
 
-        // 1. Check if user already has an active package
-        const existingSub = await prisma.userPackage.findFirst({
-            where: { userId, status: 'ACTIVE' }
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            include: { tier: true }
         });
+        const newTier = await prisma.tier.findUnique({ where: { id: parseInt(tierId) } });
 
-        if (existingSub) {
-            return res.status(400).json({ error: 'You already have an active subscription.' });
+        if (!newTier) return res.status(404).json({ error: 'Tier not found' });
+
+        // Tier upgrade logic
+        const upgradeFee = newTier.upgradeFee;
+
+        if (user.walletBalance < upgradeFee) {
+            return res.status(400).json({ error: `Insufficient balance for upgrade. Required: ₦${upgradeFee}` });
         }
 
-        // 2. Validate Package
-        const pkg = await prisma.package.findUnique({ where: { id: parseInt(packageId) } });
-        if (!pkg) return res.status(404).json({ error: 'Package not found' });
-
-        // 3. Create Subscription and Generate 45-Week Schedule
-        const userPackage = await prisma.$transaction(async (tx) => {
-            const newSub = await tx.userPackage.create({
+        await prisma.$transaction(async (tx) => {
+            await tx.user.update({
+                where: { id: userId },
                 data: {
-                    userId,
-                    packageId: pkg.id,
-                    status: 'ACTIVE',
-                    startDate: new Date()
+                    tierId: newTier.id,
+                    walletBalance: { decrement: upgradeFee }
                 }
             });
 
-            // Generate Schedule
-            const contributionsData = [];
-            const duration = pkg.durationWeeks || 45;
-            const startDate = new Date();
-
-            for (let i = 1; i <= duration; i++) {
-                const dueDate = new Date(startDate.getTime());
-                dueDate.setDate(dueDate.getDate() + (i * 7)); // Every 7 days
-
-                contributionsData.push({
-                    userPackageId: newSub.id,
-                    weekNumber: i,
-                    amount: pkg.weeklyAmount,
-                    status: 'PENDING',
-                    dueDate: dueDate
-                });
-            }
-
-            await tx.contribution.createMany({
-                data: contributionsData
+            await tx.transaction.create({
+                data: {
+                    userId,
+                    amount: upgradeFee,
+                    type: 'UPGRADE_FEE',
+                    ledgerType: 'COMPANY',
+                    direction: 'IN',
+                    status: 'SUCCESS',
+                    description: `Upgrade from ${user.tier?.name || 'NONE'} to ${newTier.name}`,
+                    reference: `UPG-${userId}-${Date.now()}`
+                }
             });
-
-            return newSub;
         });
 
-        res.status(201).json({ message: 'Subscribed successfully! Your 45-week schedule has been generated.', subscription: userPackage });
-
+        res.json({ message: `Successfully upgraded to ${newTier.name} tier` });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Subscription failed' });
+        res.status(500).json({ error: 'Upgrade failed' });
     }
 });
 
-// Admin Control: Add Package
+// Admin Control: Add/Update Tier
 router.post('/', authenticateToken, isOps, async (req, res) => {
     try {
-        const { name, weeklyAmount, durationWeeks, foodValue, upgradeFee, maintenanceFee } = req.body;
-        const newPkg = await prisma.package.create({
-            data: {
+        const { name, weeklyAmount, onboardingFee, maintenanceFee, upgradeFee, maxWithdrawal, bvThreshold } = req.body;
+        const tier = await prisma.tier.upsert({
+            where: { name },
+            update: {
+                weeklyAmount: parseFloat(weeklyAmount),
+                onboardingFee: parseFloat(onboardingFee),
+                maintenanceFee: parseFloat(maintenanceFee),
+                upgradeFee: parseFloat(upgradeFee),
+                maxWithdrawal: maxWithdrawal ? parseFloat(maxWithdrawal) : null,
+                bvThreshold: bvThreshold ? parseFloat(bvThreshold) : null
+            },
+            create: {
                 name,
                 weeklyAmount: parseFloat(weeklyAmount),
-                durationWeeks: parseInt(durationWeeks || 45),
-                totalAmount: parseFloat(weeklyAmount) * parseInt(durationWeeks || 45),
-                foodValue: parseFloat(foodValue || 0),
-                upgradeFee: parseFloat(upgradeFee || 0),
-                maintenanceFee: parseFloat(maintenanceFee || 0)
+                onboardingFee: parseFloat(onboardingFee),
+                maintenanceFee: parseFloat(maintenanceFee),
+                upgradeFee: parseFloat(upgradeFee),
+                maxWithdrawal: maxWithdrawal ? parseFloat(maxWithdrawal) : null,
+                bvThreshold: bvThreshold ? parseFloat(bvThreshold) : null
             }
         });
-        res.status(201).json(newPkg);
+        res.status(201).json(tier);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Failed to create package' });
+        res.status(500).json({ error: 'Failed to manage tier' });
     }
 });
 

@@ -13,11 +13,9 @@ router.get('/stats', auth, async (req, res) => {
         const user = await prisma.user.findUnique({
             where: { id: req.user.userId },
             include: {
-                wallet: true,
-                userPackages: {
-                    where: { status: 'ACTIVE' },
-                    include: {
-                        package: true,
+                tier: true,
+                _count: {
+                    select: {
                         contributions: {
                             where: { status: 'PAID' }
                         }
@@ -28,39 +26,36 @@ router.get('/stats', auth, async (req, res) => {
 
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        // Get Active Subscription
-        const activeSub = user.userPackages[0];
-        const currentPackage = activeSub?.package;
+        const weeksCompleted = user._count.contributions;
+        const totalWeeks = 45; // Fixed as per requirements
 
-        // Calculate stats
-        const walletBalance = user.wallet?.balance || 0;
-        const totalSavings = user.wallet?.lockedBalance || 0;
+        // Lock Logic (7 months from join date)
+        const joinDate = new Date(user.joinDate);
+        const lockEndDate = new Date(joinDate.getTime());
+        lockEndDate.setMonth(lockEndDate.getMonth() + 7);
 
-        const weeksCompleted = activeSub ? activeSub.contributions.length : 0;
-        const totalWeeks = currentPackage ? currentPackage.durationWeeks : 45;
-
-        // Lock Logic (using subscription start date)
-        const joinDate = activeSub ? new Date(activeSub.startDate) : new Date(user.createdAt);
-        const lockEndDate = new Date(joinDate.setMonth(joinDate.getMonth() + 7));
         const now = new Date();
         const isLocked = now < lockEndDate;
         const daysRemaining = isLocked ? Math.ceil((lockEndDate - now) / (1000 * 60 * 60 * 24)) : 0;
 
-        let eligibilityStatus = 'LOCKED';
-        if (!isLocked) {
-            eligibilityStatus = weeksCompleted >= totalWeeks ? 'ELIGIBLE' : 'IN_PROGRESS';
+        let eligibilityStatus = 'IN_PROGRESS';
+        if (isLocked) {
+            eligibilityStatus = 'LOCKED';
+        } else if (weeksCompleted >= totalWeeks) {
+            eligibilityStatus = 'ELIGIBLE';
         }
 
         res.json({
-            contributionBalance: totalSavings,
-            bvBalance: totalSavings, // Simplified BV = Savings for now
-            walletBalance: walletBalance,
-            tier: currentPackage ? currentPackage.name : 'NO_PACKAGE',
+            contributionBalance: user.contributionBalance,
+            bvBalance: user.bvBalance,
+            walletBalance: user.walletBalance,
+            tier: user.tier ? user.tier.name : 'NO_PACKAGE',
             weeksCompleted,
             totalWeeks,
             daysRemainingInLock: daysRemaining,
             eligibilityStatus,
-            memberId: user.referralCode
+            memberId: user.referralCode,
+            status: user.status
         });
     } catch (error) {
         console.error(error);
@@ -71,15 +66,8 @@ router.get('/stats', auth, async (req, res) => {
 // Get recent transactions
 router.get('/transactions', auth, async (req, res) => {
     try {
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.userId },
-            include: { wallet: true }
-        });
-
-        if (!user || !user.wallet) return res.json([]);
-
         const transactions = await prisma.transaction.findMany({
-            where: { walletId: user.wallet.id },
+            where: { userId: req.user.userId },
             orderBy: { createdAt: 'desc' },
             take: 10
         });

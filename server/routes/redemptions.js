@@ -38,26 +38,26 @@ router.post('/inventory', authenticateToken, isOps, async (req, res) => {
     }
 });
 
-// POST /redemptions - Redeem Food
+// POST /redemptions - Request Store Item / Benefit
 router.post('/redemptions', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.userId;
         const { inventoryId, deliveryAddress } = req.body;
 
-        // 1. Get Inventory Item
+        // 1. Get Store Item
         const item = await prisma.inventory.findUnique({ where: { id: parseInt(inventoryId) } });
         if (!item || item.quantity < 1) {
             return res.status(400).json({ error: 'Item out of stock or invalid' });
         }
 
-        // 2. Check Active Package
-        const userPackage = await prisma.userPackage.findFirst({
-            where: { userId, status: 'ACTIVE' },
-            include: { package: true }
+        // 2. Check User Tier
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            include: { tier: true }
         });
 
-        if (!userPackage) {
-            return res.status(400).json({ error: 'No active package found. Please subscribe first.' });
+        if (!user.tier) {
+            return res.status(400).json({ error: 'Active membership tier required.' });
         }
 
         // 3. Create Request
@@ -66,21 +66,20 @@ router.post('/redemptions', authenticateToken, async (req, res) => {
             await tx.redemption.create({
                 data: {
                     userId,
-                    packageId: userPackage.packageId,
+                    packageId: user.tierId,
                     status: 'REQUESTED',
                     deliveryAddress: `${deliveryAddress} [ITEM: ${item.name} | Qty: 1]`
                 }
             });
 
-            // Ideally decrement inventory on approval, or reserve now.
-            // Let's reserve now to prevent overselling.
+            // Reserve item
             await tx.inventory.update({
                 where: { id: item.id },
                 data: { quantity: { decrement: 1 } }
             });
         });
 
-        res.status(201).json({ message: 'Redemption request submitted successfully' });
+        res.status(201).json({ message: 'Request submitted successfully' });
 
     } catch (error) {
         console.error(error);

@@ -82,7 +82,7 @@ const Dashboard = () => {
                     </div>
                     <div>
                         <h2 className="text-5xl font-black font-heading text-white tracking-tighter leading-none mb-2">
-                            Welcome, <span className="text-gradient-gold">{user?.fullName?.split(' ')[0]}</span>
+                            Welcome, <span className="text-gradient-gold">{user?.firstName}</span>
                         </h2>
                         <div className="flex items-center gap-4">
                             <p className="text-noble-gray font-mono text-xs tracking-widest uppercase">Member ID: {stats.memberId}</p>

@@ -19,105 +19,93 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 });
 
-// Mock SMS
-const sendSMS = (phone, message) => {
-    console.log(`[SMS GATEWAY] To: ${phone} | Msg: ${message}`);
-};
-
-
-// Pay Next Contribution (Manual Trigger)
+// Pay Contribution
 router.post('/pay', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.userId;
 
-        // Find Active Package and Wallet
         const user = await prisma.user.findUnique({
             where: { id: userId },
-            include: {
-                wallet: true,
-                userPackages: {
-                    where: { status: 'ACTIVE' },
-                    include: { package: true }
-                }
-            }
+            include: { tier: true }
         });
 
-        const activeSub = user.userPackages[0];
-        if (!activeSub) {
-            return res.status(400).json({ error: 'No active package found. Please subscribe first.' });
+        if (!user.tier) {
+            return res.status(400).json({ error: 'No active tier found. Please select a tier first.' });
         }
 
-        const pkg = activeSub.package;
-        const amount = pkg.weeklyAmount;
+        const amount = user.tier.weeklyAmount;
+        const maintenanceFee = user.tier.maintenanceFee;
+        const totalToDeduct = amount + maintenanceFee;
 
-        // Find the next PENDING contribution in the schedule
-        const nextContribution = await prisma.contribution.findFirst({
-            where: {
-                userPackageId: activeSub.id,
-                status: 'PENDING'
-            },
-            orderBy: { weekNumber: 'asc' }
+        // Check wallet balance
+        if (user.walletBalance < totalToDeduct) {
+            return res.status(400).json({ error: 'Insufficient wallet balance. Please fund your wallet first.' });
+        }
+
+        // Find next contribution week
+        const lastContribution = await prisma.contribution.findFirst({
+            where: { userId },
+            orderBy: { weekNumber: 'desc' }
         });
+        const nextWeek = lastContribution ? lastContribution.weekNumber + 1 : 1;
 
-        if (!nextContribution) {
-            return res.status(400).json({ error: 'No pending contributions found for this cycle.' });
+        if (nextWeek > 45) {
+            return res.status(400).json({ error: 'You have completed all 45 weeks of contributions.' });
         }
 
-        if (user.wallet.balance < amount) {
-            return res.status(400).json({ error: 'Insufficient available balance. Please fund your wallet.' });
-        }
-
-        const nextWeek = nextContribution.weekNumber;
-
-        // Execute Payment in Transaction
         await prisma.$transaction(async (tx) => {
-            // 1. Update Wallet Balances
-            await tx.wallet.update({
-                where: { userId },
+            // 1. Update User Balances
+            await tx.user.update({
+                where: { id: userId },
                 data: {
-                    balance: { decrement: amount },
-                    lockedBalance: { increment: amount }
+                    walletBalance: { decrement: totalToDeduct },
+                    contributionBalance: { increment: amount },
+                    bvBalance: { increment: amount }, // BV accumulates with activity
                 }
             });
 
-            // 2. Log Transaction
+            // 2. Log Cooperative Transaction
             await tx.transaction.create({
                 data: {
-                    walletId: user.wallet.id,
-                    type: 'CONTRIBUTION',
+                    userId,
                     amount,
+                    type: 'CONTRIBUTION',
+                    ledgerType: 'COOPERATIVE',
+                    direction: 'IN',
                     status: 'SUCCESS',
-                    description: `Week ${nextWeek} Manual Contribution for ${pkg.name}`,
-                    reference: `CON-MAN-${userId}-WK${nextWeek}-${Date.now()}`
+                    description: `Week ${nextWeek} Contribution`,
+                    reference: `CON-${userId}-WK${nextWeek}-${Date.now()}`
                 }
             });
 
-            // 3. Mark Contribution as PAID
-            await tx.contribution.update({
-                where: { id: nextContribution.id },
-                data: {
-                    status: 'PAID',
-                    paidAt: new Date()
-                }
-            });
-
-            // 4. Update Subscription Progress
-            await tx.userPackage.update({
-                where: { id: activeSub.id },
-                data: { weeksPaid: { increment: 1 } }
-            });
-
-            // 5. Referral Check (Only on first contribution)
-            if (nextWeek === 1) {
-                await processReferralBonus(userId, tx);
+            // 3. Log Company Maintenance Fee
+            if (maintenanceFee > 0) {
+                await tx.transaction.create({
+                    data: {
+                        userId,
+                        amount: maintenanceFee,
+                        type: 'MAINTENANCE_FEE',
+                        ledgerType: 'COMPANY',
+                        direction: 'IN',
+                        status: 'SUCCESS',
+                        description: `Week ${nextWeek} Maintenance Fee`,
+                        reference: `MNT-${userId}-WK${nextWeek}-${Date.now()}`
+                    }
+                });
             }
+
+            // 4. Create Contribution Record
+            await tx.contribution.create({
+                data: {
+                    userId,
+                    weekNumber: nextWeek,
+                    amount,
+                    status: 'PAID'
+                }
+            });
         });
 
-        // Mock SMS
-        sendSMS(user.phone || '000', `ValueHills: Week ${nextWeek} manual payment of N${amount} successful. Total Savings: N${user.wallet.lockedBalance + amount}`);
-
         res.json({ message: `Week ${nextWeek} contribution successful`, week: nextWeek });
-
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Payment failed' });

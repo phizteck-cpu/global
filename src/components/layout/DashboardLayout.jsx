@@ -36,7 +36,7 @@ const DashboardLayout = ({ children }) => {
                     <div className="flex items-center gap-3">
                         <ShieldAlert size={18} />
                         <span className="text-xs font-black uppercase tracking-widest">
-                            Shadow Mode Active: Watching Dashboard as <span className="underline">{user?.fullName}</span>
+                            Shadow Mode Active: Watching Dashboard as <span className="underline">{user?.firstName} {user?.lastName}</span>
                         </span>
                     </div>
                     <button

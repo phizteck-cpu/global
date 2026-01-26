@@ -1,34 +1,34 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, isSuperAdmin, isFinance, isOps, isSupportAdmin } from '../middleware/auth.js';
+import { authenticateToken, isSuperAdmin, isAdmin, isFinance, isOps, anyAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // Admin Stats
-router.get('/stats', authenticateToken, isSupportAdmin, async (req, res) => {
+router.get('/stats', authenticateToken, anyAdmin, async (req, res) => {
     try {
         const totalUsers = await prisma.user.count({ where: { role: 'MEMBER' } });
 
-        // Sum total cooperative assets (Locked Balances in All Wallets)
-        const totalAssets = await prisma.wallet.aggregate({
-            _sum: { lockedBalance: true }
+        // Sum total cooperative assets (Cooperative Ledger)
+        const totalAssets = await prisma.user.aggregate({
+            _sum: { contributionBalance: true }
         });
 
-        // Pending Withdrawals (Transactions of type WITHDRAWAL and status PENDING)
-        const pendingApprovals = await prisma.transaction.count({
-            where: { type: 'WITHDRAWAL', status: 'PENDING' }
+        // Pending Withdrawals
+        const pendingApprovals = await prisma.withdrawal.count({
+            where: { status: 'PENDING' }
         });
 
-        // Company Revenue (Admin Fees, Upgrade Fees, etc.)
+        // Company Revenue (Transactions in COMPANY ledger)
         const companyRevenue = await prisma.transaction.aggregate({
-            where: { type: { in: ['ADMIN_FEE', 'UPGRADE_FEE'] }, status: 'SUCCESS' },
+            where: { ledgerType: 'COMPANY', status: 'SUCCESS' },
             _sum: { amount: true }
         });
 
         res.json({
             totalUsers,
-            totalAssets: totalAssets._sum.lockedBalance || 0,
+            totalAssets: totalAssets._sum.contributionBalance || 0,
             pendingApprovals,
             companyRevenue: companyRevenue._sum.amount || 0
         });
@@ -39,40 +39,19 @@ router.get('/stats', authenticateToken, isSupportAdmin, async (req, res) => {
 });
 
 // Recent Users
-router.get('/users', authenticateToken, isSupportAdmin, async (req, res) => {
+router.get('/users', authenticateToken, anyAdmin, async (req, res) => {
     try {
         const users = await prisma.user.findMany({
             orderBy: { createdAt: 'desc' },
             take: 20,
             include: {
-                userPackages: {
-                    where: { status: 'ACTIVE' },
-                    include: { package: true }
-                },
-                wallet: true
-            }
-        });
-        res.json(users);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
-// Pending Withdrawal Requests (Approvals)
-router.get('/approvals', authenticateToken, isFinance, async (req, res) => {
-    try {
-        const requests = await prisma.transaction.findMany({
-            where: { type: 'WITHDRAWAL', status: 'PENDING' },
-            include: {
-                wallet: {
-                    include: {
-                        user: { select: { fullName: true, email: true } }
-                    }
+                tier: true,
+                _count: {
+                    select: { contributions: { where: { status: 'PAID' } } }
                 }
             }
         });
-        res.json(requests);
+        res.json(users);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
@@ -86,8 +65,8 @@ router.get('/audit-logs', authenticateToken, isSuperAdmin, async (req, res) => {
             orderBy: { timestamp: 'desc' },
             take: 50,
             include: {
-                admin: { select: { email: true, fullName: true } },
-                targetUser: { select: { email: true, fullName: true } }
+                admin: { select: { email: true, firstName: true, lastName: true } },
+                targetUser: { select: { email: true, firstName: true, lastName: true } }
             }
         });
         res.json(logs);
@@ -97,65 +76,16 @@ router.get('/audit-logs', authenticateToken, isSuperAdmin, async (req, res) => {
     }
 });
 
-// Admin: Get All Redemption Requests
-router.get('/redemptions', authenticateToken, isOps, async (req, res) => {
-    try {
-        const requests = await prisma.redemption.findMany({
-            include: { user: { select: { fullName: true, email: true, phone: true } } },
-            orderBy: { requestDate: 'desc' }
-        });
-        res.json(requests);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Failed to fetch redemptions' });
-    }
-});
-
-// Admin: Update Redemption Status
-router.post('/redemptions/:id/status', authenticateToken, isOps, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status } = req.body;
-
-        await prisma.redemption.update({
-            where: { id: parseInt(id) },
-            data: {
-                status,
-                processedDate: new Date()
-            }
-        });
-
-        // Log Audit
-        await prisma.auditLog.create({
-            data: {
-                adminId: req.user.userId,
-                action: 'UPDATE_REDEMPTION',
-                details: `Updated Redemption #${id} to ${status}`,
-                targetUserId: null
-            }
-        });
-
-        res.json({ message: 'Status updated' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Update failed' });
-    }
-});
-
 // Admin Control: Get Full Member Profile
-router.get('/users/:id', authenticateToken, isSupportAdmin, async (req, res) => {
+router.get('/users/:id', authenticateToken, anyAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const user = await prisma.user.findUnique({
             where: { id: parseInt(id) },
             include: {
-                wallet: true,
-                userPackages: {
-                    include: { package: true, contributions: true }
-                },
-                referrals: {
-                    include: { refereeUser: { select: { fullName: true, email: true } } }
-                }
+                tier: true,
+                contributions: { orderBy: { weekNumber: 'asc' } },
+                transactions: { orderBy: { createdAt: 'desc' }, take: 20 }
             }
         });
         if (!user) return res.status(404).json({ error: 'User not found' });
@@ -167,24 +97,24 @@ router.get('/users/:id', authenticateToken, isSupportAdmin, async (req, res) => 
 });
 
 // Admin Control: Patch User Status/KYC
-router.patch('/users/:id/status', authenticateToken, isSupportAdmin, async (req, res) => {
+router.patch('/users/:id/status', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { status, kycVerified } = req.body;
+        const { status, kycStatus } = req.body;
 
         const updatedUser = await prisma.user.update({
             where: { id: parseInt(id) },
             data: {
                 ...(status && { status }),
-                ...(kycVerified !== undefined && { kycVerified })
+                ...(kycStatus && { kycStatus })
             }
         });
 
         await prisma.auditLog.create({
             data: {
-                adminId: req.user.userId,
+                adminId: req.user.id,
                 action: 'UPDATE_USER_STATUS',
-                details: `Updated user ${id} status: ${status}, KYC: ${kycVerified}`,
+                details: `Updated user ${id} status: ${status}, KYC: ${kycStatus}`,
                 targetUserId: parseInt(id)
             }
         });
@@ -208,7 +138,7 @@ router.patch('/users/:id/role', authenticateToken, isSuperAdmin, async (req, res
 
         await prisma.auditLog.create({
             data: {
-                adminId: req.user.userId,
+                adminId: req.user.id,
                 action: 'UPDATE_USER_ROLE',
                 details: `Changed user ${id} role to ${role}`,
                 targetUserId: parseInt(id)
@@ -232,21 +162,21 @@ router.post('/impersonate/:id', authenticateToken, isSuperAdmin, async (req, res
         if (!user) return res.status(404).json({ error: 'User not found' });
 
         const token = jwt.sign(
-            { userId: user.id, role: user.role, isImpersonated: true, adminId: req.user.userId },
+            { userId: user.id, role: user.role, isImpersonated: true, adminId: req.user.id },
             process.env.JWT_SECRET || 'secret_key',
             { expiresIn: '1h' }
         );
 
         await prisma.auditLog.create({
             data: {
-                adminId: req.user.userId,
+                adminId: req.user.id,
                 action: 'IMPERSONATE_USER',
                 details: `Started impersonation of user ${user.email}`,
                 targetUserId: user.id
             }
         });
 
-        res.json({ token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, isImpersonating: true } });
+        res.json({ token, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, isImpersonating: true } });
     } catch (error) {
         res.status(500).json({ error: 'Impersonation failed' });
     }

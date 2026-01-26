@@ -62,6 +62,9 @@ const Profile = () => {
         );
     }
 
+    const isKycVerified = profile.kycStatus === 'VERIFIED';
+    const initials = (profile.firstName?.[0] || '') + (profile.lastName?.[0] || '');
+
     return (
         <div className="space-y-10 animate-fade-in pb-20 max-w-7xl mx-auto">
             {/* Header Terminal */}
@@ -70,7 +73,7 @@ const Profile = () => {
                 <div className="relative z-10 flex items-center gap-8">
                     <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary to-emerald-600 p-1">
                         <div className="w-full h-full rounded-[1.2rem] bg-slate-900 flex items-center justify-center text-4xl font-black text-white">
-                            {profile.fullName?.[0]}
+                            {initials}
                         </div>
                     </div>
                     <div className="space-y-2">
@@ -78,7 +81,7 @@ const Profile = () => {
                             <Fingerprint size={16} />
                             <span className="text-[10px] uppercase tracking-[0.4em] font-black">Entity Profile v4.0</span>
                         </div>
-                        <h2 className="text-5xl font-black font-heading text-white tracking-tighter leading-none">{profile.fullName}</h2>
+                        <h2 className="text-5xl font-black font-heading text-white tracking-tighter leading-none">{profile.firstName} {profile.lastName}</h2>
                         <div className="flex items-center gap-4">
                             <p className="text-noble-gray font-mono text-xs italic tracking-widest">{profile.referralCode}</p>
                             <span className="w-1.5 h-1.5 bg-noble-gray rounded-full opacity-30"></span>
@@ -87,10 +90,10 @@ const Profile = () => {
                     </div>
                 </div>
                 <div className="relative z-10">
-                    <div className={`px-6 py-3 rounded-2xl border flex items-center gap-3 ${profile.kycVerified ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-amber-500/10 border-amber-500/20 text-amber-500'}`}>
-                        {profile.kycVerified ? <ShieldCheck size={16} /> : <AlertCircle size={16} />}
+                    <div className={`px-6 py-3 rounded-2xl border flex items-center gap-3 ${isKycVerified ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-amber-500/10 border-amber-500/20 text-amber-500'}`}>
+                        {isKycVerified ? <ShieldCheck size={16} /> : <AlertCircle size={16} />}
                         <span className="text-[10px] font-black uppercase tracking-widest">
-                            {profile.kycVerified ? 'Security Verified' : 'Security Pending'}
+                            {isKycVerified ? 'Security Verified' : 'Security Pending'}
                         </span>
                     </div>
                 </div>
@@ -120,7 +123,7 @@ const Profile = () => {
                         </div>
                         <p className="text-sm text-noble-gray mb-10 italic font-light">Verified entities unlock premium tiers and increased capital mobility.</p>
 
-                        {!profile.kycVerified && profile.status !== 'PENDING' ? (
+                        {!isKycVerified && profile.kycStatus !== 'PENDING' ? (
                             <form onSubmit={handleKycSubmit} className="space-y-6">
                                 <div className="space-y-3">
                                     <label className="text-[10px] uppercase tracking-widest font-black text-noble-gray ml-2 flex items-center gap-2">
@@ -141,13 +144,13 @@ const Profile = () => {
                             </form>
                         ) : (
                             <div className="p-10 border border-dashed border-white/10 rounded-[2.5rem] flex flex-col items-center text-center space-y-4">
-                                <div className={`w-20 h-20 rounded-full flex items-center justify-center ${profile.kycVerified ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500 animate-pulse'}`}>
-                                    {profile.kycVerified ? <ShieldCheck size={40} /> : <Clock size={40} />}
+                                <div className={`w-20 h-20 rounded-full flex items-center justify-center ${isKycVerified ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500 animate-pulse'}`}>
+                                    {isKycVerified ? <ShieldCheck size={40} /> : <Clock size={40} />}
                                 </div>
                                 <div>
-                                    <h4 className="text-2xl font-black text-white font-heading">{profile.kycVerified ? 'Audit Complete' : 'Manual Audit In-Progress'}</h4>
+                                    <h4 className="text-2xl font-black text-white font-heading">{isKycVerified ? 'Audit Complete' : 'Manual Audit In-Progress'}</h4>
                                     <p className="text-noble-gray text-sm italic mt-2">
-                                        {profile.kycVerified ? 'Your electronic identity is fully verified for all cooperative operations.' : 'Our compliance algorithms are currently validating your transmitted documents. 24-48h average.'}
+                                        {isKycVerified ? 'Your electronic identity is fully verified for all cooperative operations.' : 'Our compliance algorithms are currently validating your transmitted documents. 24-48h average.'}
                                     </p>
                                 </div>
                             </div>
@@ -163,18 +166,18 @@ const Profile = () => {
                             <h3 className="text-xl font-black font-heading text-white tracking-tighter uppercase">Stake Level</h3>
                         </div>
 
-                        {profile.userPackages?.[0] ? (
+                        {profile.tier ? (
                             <div className="space-y-6">
                                 <div>
-                                    <p className="text-3xl font-black text-white font-heading leading-tight">{profile.userPackages[0].package.name}</p>
-                                    <p className="text-[10px] text-noble-gray uppercase font-bold tracking-[0.2em] mt-1">Commenced: {new Date(profile.userPackages[0].startDate).toLocaleDateString()}</p>
+                                    <p className="text-3xl font-black text-white font-heading leading-tight">{profile.tier.name}</p>
+                                    <p className="text-[10px] text-noble-gray uppercase font-bold tracking-[0.2em] mt-1">Institutional Cycle</p>
                                 </div>
                                 <div className="space-y-2">
                                     <div className="h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                        <div className="h-full bg-primary" style={{ width: `${(profile.userPackages[0].weeksPaid / 45) * 100}%` }}></div>
+                                        <div className="h-full bg-primary" style={{ width: `${((profile.contributions?.length || 0) / 45) * 100}%` }}></div>
                                     </div>
                                     <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                                        <span className="text-primary">{profile.userPackages[0].weeksPaid} Cycles Completed</span>
+                                        <span className="text-primary">{profile.contributions?.length || 0} Cycles Completed</span>
                                         <span className="text-noble-gray">45 Total</span>
                                     </div>
                                 </div>

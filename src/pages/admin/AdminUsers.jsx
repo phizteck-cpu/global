@@ -91,7 +91,7 @@ const AdminUsers = () => {
     };
 
     const filteredUsers = users.filter(u =>
-        u.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (u.firstName + ' ' + u.lastName).toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -105,8 +105,8 @@ const AdminUsers = () => {
 
     const stats = [
         { label: 'Total Members', value: users.filter(u => u.role === 'MEMBER').length, icon: Users, color: 'text-primary' },
-        { label: 'Active Packages', value: users.filter(u => u.userPackages?.some(p => p.status === 'ACTIVE')).length, icon: Activity, color: 'text-secondary' },
-        { label: 'Total Internal Assets', value: '₦' + users.reduce((acc, u) => acc + (u.wallet?.lockedBalance || 0), 0).toLocaleString(), icon: Wallet, color: 'text-emerald-400' },
+        { label: 'Tiered Accounts', value: users.filter(u => u.tierId).length, icon: Activity, color: 'text-secondary' },
+        { label: 'Total Internal Assets', value: '₦' + users.reduce((acc, u) => acc + (u.contributionBalance || 0), 0).toLocaleString(), icon: Wallet, color: 'text-emerald-400' },
     ];
 
     return (
@@ -164,28 +164,28 @@ const AdminUsers = () => {
                                     <td className="px-10 py-8">
                                         <div className="flex items-center gap-6">
                                             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 flex items-center justify-center font-black font-heading text-xl text-white group-hover:border-primary/50 transition-colors">
-                                                {u.fullName?.[0]}
+                                                {u.firstName?.[0]}
                                             </div>
                                             <div>
-                                                <p className="text-xl font-black text-white tracking-tight leading-none">{u.fullName}</p>
+                                                <p className="text-xl font-black text-white tracking-tight leading-none">{u.firstName} {u.lastName}</p>
                                                 <p className="text-xs text-noble-gray mt-2 font-mono tracking-tighter italic">{u.email}</p>
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-10 py-8">
                                         <div className="flex flex-col gap-3">
-                                            {u.userPackages?.[0]?.package ? (
+                                            {u.tier ? (
                                                 <div className="flex items-center gap-2">
                                                     <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">{u.userPackages[0].package.name}</span>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">{u.tier.name}</span>
                                                 </div>
                                             ) : (
-                                                <span className="text-[10px] uppercase tracking-widest text-noble-gray/40 font-black">Vault Inactive</span>
+                                                <span className="text-[10px] uppercase tracking-widest text-noble-gray/40 font-black">Tier Inactive</span>
                                             )}
                                             <div className="flex items-center gap-2">
-                                                <Fingerprint size={12} className={u.kycVerified ? "text-emerald-400" : "text-amber-500"} />
-                                                <span className={`text-[10px] uppercase tracking-widest font-black ${u.kycVerified ? "text-emerald-400" : "text-amber-400 opacity-60"}`}>
-                                                    {u.kycVerified ? 'Verified Identity' : 'Pending Audit'}
+                                                <Fingerprint size={12} className={u.kycStatus === 'VERIFIED' ? "text-emerald-400" : "text-amber-500"} />
+                                                <span className={`text-[10px] uppercase tracking-widest font-black ${u.kycStatus === 'VERIFIED' ? "text-emerald-400" : "text-amber-400 opacity-60"}`}>
+                                                    {u.kycStatus === 'VERIFIED' ? 'Verified Identity' : 'Audit Required'}
                                                 </span>
                                             </div>
                                         </div>
@@ -193,7 +193,7 @@ const AdminUsers = () => {
                                     <td className="px-10 py-8 text-right">
                                         <div className="space-y-1">
                                             <p className="text-2xl font-black font-heading text-white tracking-tighter leading-none">
-                                                ₦{u.wallet?.lockedBalance?.toLocaleString() || '0'}
+                                                ₦{u.contributionBalance?.toLocaleString() || '0'}
                                             </p>
                                             <p className="text-[10px] uppercase tracking-[0.2em] text-noble-gray font-black italic">Locked Capital</p>
                                         </div>
@@ -257,11 +257,11 @@ const AdminUsers = () => {
                                 <div className="flex items-center gap-8">
                                     <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary to-emerald-600 p-1">
                                         <div className="w-full h-full rounded-[1.2rem] bg-slate-900 flex items-center justify-center text-4xl font-black text-white">
-                                            {profileData.fullName?.[0]}
+                                            {profileData.firstName?.[0]}
                                         </div>
                                     </div>
                                     <div>
-                                        <h3 className="text-4xl font-black text-white font-heading tracking-tighter leading-none mb-2">{profileData.fullName}</h3>
+                                        <h3 className="text-4xl font-black text-white font-heading tracking-tighter leading-none mb-2">{profileData.firstName} {profileData.lastName}</h3>
                                         <div className="flex items-center gap-4">
                                             <p className="text-noble-gray font-mono text-sm tracking-widest">{profileData.email}</p>
                                             <span className="w-1.5 h-1.5 bg-noble-gray rounded-full opacity-30" />
@@ -277,33 +277,33 @@ const AdminUsers = () => {
                             {/* Modal Content */}
                             <div className="p-10 overflow-y-auto space-y-12">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                    <ProfileDetailCard label="Electronic Assets" value={`₦${profileData.wallet?.balance?.toLocaleString()}`} sub="Capital Liquidity" icon={<Wallet size={20} />} color="text-emerald-400" />
-                                    <ProfileDetailCard label="Cooperative Locked" value={`₦${profileData.wallet?.lockedBalance?.toLocaleString()}`} sub="Secured Savings" icon={<ShieldCheck size={20} />} color="text-primary" />
-                                    <ProfileDetailCard label="Referral Network" value={profileData.referrals?.length} sub="Active Geneology" icon={<Globe size={20} />} color="text-amber-500" />
+                                    <ProfileDetailCard label="Virtual Liquidity" value={`₦${profileData.walletBalance?.toLocaleString()}`} sub="Current Availability" icon={<Wallet size={20} />} color="text-emerald-400" />
+                                    <ProfileDetailCard label="Cooperative Locked" value={`₦${profileData.contributionBalance?.toLocaleString()}`} sub="Secured Institutional Capital" icon={<ShieldCheck size={20} />} color="text-primary" />
+                                    <ProfileDetailCard label="Business Volume" value={profileData.bvBalance} sub="Activity Influence" icon={<Activity size={20} />} color="text-amber-500" />
                                 </div>
 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                                    {/* Subscription Status */}
+                                    {/* Strategy Status */}
                                     <div className="glass-card p-8 rounded-[2.5rem] border-white/5 space-y-6">
                                         <div className="flex items-center gap-3 text-white border-b border-white/5 pb-4">
                                             <ArrowUpCircle size={20} className="text-primary" />
-                                            <h4 className="text-lg font-black font-heading uppercase tracking-tight">Active Strategy</h4>
+                                            <h4 className="text-lg font-black font-heading uppercase tracking-tight">Financial Strategy</h4>
                                         </div>
-                                        {profileData.userPackages?.[0] ? (
+                                        {profileData.tier ? (
                                             <div className="space-y-6">
                                                 <div className="flex justify-between items-end">
                                                     <div>
-                                                        <p className="text-3xl font-black text-white tracking-tighter">{profileData.userPackages[0].package.name}</p>
-                                                        <p className="text-[10px] text-noble-gray font-bold uppercase tracking-widest mt-1">Institutional Cycle</p>
+                                                        <p className="text-3xl font-black text-white tracking-tighter">{profileData.tier.name}</p>
+                                                        <p className="text-[10px] text-noble-gray font-bold uppercase tracking-widest mt-1">45-Week Program</p>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="text-sm font-bold text-white">Week {profileData.userPackages[0].weeksPaid} / 45</p>
+                                                        <p className="text-sm font-bold text-white">{profileData.contributions?.length || 0} / 45 Weeks</p>
                                                     </div>
                                                 </div>
                                                 <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                                                     <motion.div
                                                         initial={{ width: 0 }}
-                                                        animate={{ width: `${(profileData.userPackages[0].weeksPaid / 45) * 100}%` }}
+                                                        animate={{ width: `${((profileData.contributions?.length || 0) / 45) * 100}%` }}
                                                         className="h-full bg-primary"
                                                     />
                                                 </div>
@@ -313,23 +313,25 @@ const AdminUsers = () => {
                                         )}
                                     </div>
 
-                                    {/* Connection Node */}
+                                    {/* Financial Ledger */}
                                     <div className="glass-card p-8 rounded-[2.5rem] border-white/5 space-y-6">
                                         <div className="flex items-center gap-3 text-white border-b border-white/5 pb-4">
-                                            <Users size={20} className="text-amber-500" />
-                                            <h4 className="text-lg font-black font-heading uppercase tracking-tight">Referral Node Members</h4>
+                                            <Fingerprint size={20} className="text-amber-500" />
+                                            <h4 className="text-lg font-black font-heading uppercase tracking-tight">Recent Ledger Entries</h4>
                                         </div>
                                         <div className="space-y-4 max-h-48 overflow-y-auto pr-4">
-                                            {profileData.referrals?.map((ref, i) => (
+                                            {profileData.transactions?.map((tx, i) => (
                                                 <div key={i} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
                                                     <div>
-                                                        <p className="font-bold text-white text-sm">{ref.refereeUser.fullName}</p>
-                                                        <p className="text-[10px] text-noble-gray">{ref.refereeUser.email}</p>
+                                                        <p className="font-bold text-white text-xs">{tx.description}</p>
+                                                        <p className="text-[9px] text-noble-gray uppercase">{tx.ledgerType} • {tx.type}</p>
                                                     </div>
-                                                    <p className="text-[10px] font-black uppercase text-primary tracking-widest">L{ref.level}</p>
+                                                    <p className={`text-sm font-black ${tx.direction === 'IN' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                        {tx.direction === 'IN' ? '+' : '-'}₦{tx.amount.toLocaleString()}
+                                                    </p>
                                                 </div>
                                             ))}
-                                            {profileData.referrals?.length === 0 && <p className="text-center text-noble-gray italic py-4">Node is currently isolated.</p>}
+                                            {(profileData.transactions?.length === 0 || !profileData.transactions) && <p className="text-center text-noble-gray italic py-4">Ledger is empty.</p>}
                                         </div>
                                     </div>
                                 </div>
@@ -351,21 +353,21 @@ const AdminUsers = () => {
                             className="relative w-full max-w-md bg-slate-900 border border-white/10 rounded-[3rem] p-10 shadow-2xl"
                         >
                             <h3 className="text-3xl font-black text-white font-heading tracking-tighter mb-2">Ops Terminal</h3>
-                            <p className="text-noble-gray text-sm mb-10">Executing institutional commands for: <span className="text-primary font-bold">{selectedUser.fullName}</span></p>
+                            <p className="text-noble-gray text-sm mb-10">Executing commands for: <span className="text-primary font-bold">{selectedUser.firstName} {selectedUser.lastName}</span></p>
 
                             <div className="space-y-4">
                                 <ActionButton
-                                    label={selectedUser.kycVerified ? "Revoke Verification" : "Authorize Identity (KYC)"}
+                                    label={selectedUser.kycStatus === 'VERIFIED' ? "Revoke Identity Status" : "Authorize Identity Status"}
                                     icon={<ShieldCheck size={20} />}
-                                    color={selectedUser.kycVerified ? "bg-amber-500/10 text-amber-500" : "bg-emerald-500/10 text-emerald-500"}
-                                    onClick={() => handleUpdateStatus(selectedUser.status, !selectedUser.kycVerified)}
+                                    color={selectedUser.kycStatus === 'VERIFIED' ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-500"}
+                                    onClick={() => handleUpdateStatus(selectedUser.status, selectedUser.kycStatus === 'VERIFIED' ? 'REJECTED' : 'VERIFIED')}
                                     loading={actionLoading}
                                 />
                                 <ActionButton
-                                    label={selectedUser.status === 'ACTIVE' ? "Suspend Entity" : "Activate Entity"}
+                                    label={selectedUser.status === 'ACTIVE' ? "Deactivate Entity" : "Activate Entity"}
                                     icon={selectedUser.status === 'ACTIVE' ? <UserX size={20} /> : <UserCheck size={20} />}
                                     color={selectedUser.status === 'ACTIVE' ? "bg-red-500/10 text-red-500" : "bg-emerald-500/10 text-emerald-400"}
-                                    onClick={() => handleUpdateStatus(selectedUser.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE', selectedUser.kycVerified)}
+                                    onClick={() => handleUpdateStatus(selectedUser.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE', selectedUser.kycStatus)}
                                     loading={actionLoading}
                                 />
                                 {currentUser?.role === 'SUPERADMIN' && (

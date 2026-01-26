@@ -23,7 +23,7 @@ const Header = ({ toggleSidebar }) => {
         if (user) fetchNotifications();
     }, [user]);
 
-    const initials = user?.fullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+    const initials = (user?.firstName?.[0] || 'U') + (user?.lastName?.[0] || '');
 
     return (
         <header className="sticky top-0 z-30 h-20 px-6 nav-blur border-b border-white/5 bg-background/80 backdrop-blur-md flex items-center justify-between text-white">
@@ -92,7 +92,7 @@ const Header = ({ toggleSidebar }) => {
                     className="flex items-center gap-3 pl-6 border-l border-white/10 cursor-pointer group"
                 >
                     <div className="text-right hidden sm:block">
-                        <p className="text-sm font-bold text-white group-hover:text-primary transition-colors">{user?.fullName || 'Member'}</p>
+                        <p className="text-sm font-bold text-white group-hover:text-primary transition-colors">{user?.firstName} {user?.lastName}</p>
                         <p className="text-[10px] text-noble-gray uppercase tracking-widest">{user?.role || 'Member'}</p>
                     </div>
                     <motion.div

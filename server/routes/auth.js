@@ -7,17 +7,16 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // Register
-// Register
 router.post('/signup', async (req, res) => {
     try {
-        const { fullName, email, phone, password, tierId, referralCode } = req.body;
+        const { firstName, lastName, email, phone, password, tierId, referralCode } = req.body;
 
         // Check if user exists
         const existingUser = await prisma.user.findFirst({
             where: {
                 OR: [
                     { email },
-                    { phone }
+                    { phone: phone || undefined }
                 ]
             }
         });
@@ -31,11 +30,14 @@ router.post('/signup', async (req, res) => {
             referrer = await prisma.user.findUnique({ where: { referralCode } });
         }
 
-        // Validate Package if provided
-        let selectedPackage = null;
+        // Validate Tier
+        let selectedTier = null;
         if (tierId) {
-            selectedPackage = await prisma.package.findUnique({ where: { id: parseInt(tierId) } });
-            if (!selectedPackage) return res.status(400).json({ message: 'Invalid Package selected' });
+            selectedTier = await prisma.tier.findUnique({ where: { id: parseInt(tierId) } });
+            if (!selectedTier) return res.status(400).json({ message: 'Invalid Membership Tier selected' });
+        } else {
+            // Default to STARTER if not provided
+            selectedTier = await prisma.tier.findUnique({ where: { name: 'STARTER' } });
         }
 
         // Hash password
@@ -43,56 +45,31 @@ router.post('/signup', async (req, res) => {
 
         // Execute in transaction
         const user = await prisma.$transaction(async (tx) => {
-            // Create user with Wallet
+            // Create user
             const newUser = await tx.user.create({
                 data: {
-                    fullName,
+                    firstName,
+                    lastName,
                     email,
                     phone,
                     password: hashedPassword,
                     status: "ACTIVE",
                     referredBy: referrer ? referrer.id : null,
-                    wallet: {
-                        create: {
-                            balance: 0.0,
-                            lockedBalance: 0.0
-                        }
-                    }
+                    tierId: selectedTier.id,
                 }
             });
 
-            // If Package selected, create Subscription (UserPackage)
-            if (selectedPackage) {
-                await tx.userPackage.create({
-                    data: {
-                        userId: newUser.id,
-                        packageId: selectedPackage.id,
-                        startDate: new Date(),
-                        status: 'ACTIVE'
-                    }
-                });
-            }
-
-            // Create Referral Record
-            if (referrer) {
-                await tx.referral.create({
-                    data: {
-                        referrerId: referrer.id,
-                        refereeId: newUser.id,
-                        status: 'PENDING',
-                        level: 1
-                    }
-                });
-            }
-
-            // Log Registration Fee
+            // 4.1 Administrative Fee System (Onboarding)
+            // Register specific tier onboarding fee
             await tx.transaction.create({
                 data: {
-                    walletId: (await tx.wallet.findUnique({ where: { userId: newUser.id } })).id,
-                    type: 'ADMIN_FEE',
-                    amount: 3000.00,
+                    userId: newUser.id,
+                    amount: selectedTier.onboardingFee,
+                    type: 'ONBOARDING_FEE',
+                    ledgerType: 'COMPANY',
+                    direction: 'IN',
                     status: 'SUCCESS',
-                    description: 'Registration Fee',
+                    description: `Onboarding Fee for ${selectedTier.name} tier`,
                     reference: `REG-${newUser.id}-${Date.now()}`
                 }
             });
@@ -102,7 +79,17 @@ router.post('/signup', async (req, res) => {
 
         const token = jwt.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '1d' });
 
-        res.status(201).json({ token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, referralCode: user.referralCode } });
+        res.status(201).json({
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                referralCode: user.referralCode
+            }
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error: ' + error.message });
@@ -114,7 +101,11 @@ router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await prisma.user.findUnique({
+            where: { email },
+            include: { tier: true }
+        });
+
         if (!user) {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
@@ -126,7 +117,17 @@ router.post('/login', async (req, res) => {
 
         const token = jwt.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '1d' });
 
-        res.json({ token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role } });
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                tier: user.tier?.name
+            }
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });

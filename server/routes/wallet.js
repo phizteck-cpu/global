@@ -7,19 +7,24 @@ import crypto from 'crypto';
 const prisma = new PrismaClient();
 const router = express.Router();
 
-// GET /wallet - Get Wallet Balance
+// GET /api/wallet - Get Wallet Balances
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const wallet = await prisma.wallet.findUnique({
-            where: { userId: req.user.userId }
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.userId },
+            select: { walletBalance: true, contributionBalance: true, bvBalance: true }
         });
-        res.json(wallet);
+        res.json({
+            balance: user.walletBalance,
+            lockedBalance: user.contributionBalance,
+            bvBalance: user.bvBalance
+        });
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch wallet' });
     }
 });
 
-// POST /wallet/fund - Fund Wallet with Paystack
+// POST /api/wallet/fund - Fund Wallet with Paystack
 router.post('/fund', authenticateToken, async (req, res) => {
     try {
         const { amount } = req.body;
@@ -34,15 +39,15 @@ router.post('/fund', authenticateToken, async (req, res) => {
             purpose: 'WALLET_FUNDING'
         });
 
-        // Log the pending transaction
-        const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
+        // Log the pending transaction (VIRTUAL ledger)
         await prisma.transaction.create({
             data: {
-                walletId: wallet.id,
+                userId: user.id,
                 type: 'FUNDING',
+                ledgerType: 'VIRTUAL',
+                direction: 'IN',
                 amount: parseFloat(amount),
                 status: 'PENDING',
-                paymentProvider: 'PAYSTACK',
                 reference: payment.data.reference,
                 description: 'Wallet Funding via Paystack'
             }
@@ -60,34 +65,42 @@ router.post('/fund', authenticateToken, async (req, res) => {
     }
 });
 
-// POST /wallet/withdraw - Withdraw Funds
+// POST /api/wallet/withdraw - Withdraw Funds (Redirects to Withdrawal model for cooperative)
+// This endpoint specifically for the VIRTUAL wallet (Operating/Earnings)
 router.post('/withdraw', authenticateToken, async (req, res) => {
     try {
         const { amount, bankName, accountNumber, accountName } = req.body;
         const userId = req.user.userId;
 
-        const wallet = await prisma.wallet.findUnique({ where: { userId } });
+        const user = await prisma.user.findUnique({ where: { id: userId } });
 
-        if (wallet.balance < amount) {
+        if (user.walletBalance < amount) {
             return res.status(400).json({ error: 'Insufficient wallet balance' });
         }
 
         await prisma.$transaction(async (tx) => {
             // Deduct from wallet
-            await tx.wallet.update({
-                where: { userId },
-                data: { balance: { decrement: amount } }
+            await tx.user.update({
+                where: { id: userId },
+                data: {
+                    walletBalance: { decrement: amount },
+                    bankName,
+                    accountNumber,
+                    accountName
+                }
             });
 
             // Create Transaction
             await tx.transaction.create({
                 data: {
-                    walletId: wallet.id,
-                    type: 'WITHDRAWAL',
+                    userId,
                     amount,
+                    type: 'WITHDRAWAL',
+                    ledgerType: 'VIRTUAL',
+                    direction: 'OUT',
                     status: 'PENDING',
-                    description: `Withdrawal to ${bankName} (${accountNumber})`,
-                    reference: `WD-${Date.now()}`
+                    description: `Withdrawal from Virtual Wallet to ${bankName}`,
+                    reference: `WD-VIRT-${Date.now()}`
                 }
             });
         });
@@ -99,7 +112,7 @@ router.post('/withdraw', authenticateToken, async (req, res) => {
     }
 });
 
-// POST /wallet/webhook - Paystack Webhook Handler
+// POST /api/wallet/webhook - Paystack Webhook Handler
 router.post('/webhook', async (req, res) => {
     try {
         // Validate Paystack Signature
@@ -108,7 +121,6 @@ router.post('/webhook', async (req, res) => {
             .digest('hex');
 
         if (hash !== req.headers['x-paystack-signature']) {
-            // In real world, we would return 401, but for testing or if key is slightly off we log
             console.warn('Webhook Signature mismatch');
             return res.status(401).send('Unauthorized');
         }
@@ -118,7 +130,7 @@ router.post('/webhook', async (req, res) => {
             const { reference, amount, metadata } = event.data;
             const userId = metadata.userId;
 
-            // Credit Wallet and Update Transaction
+            // Credit User Wallet and Update Transaction
             await prisma.$transaction(async (tx) => {
                 const transaction = await tx.transaction.findUnique({ where: { reference } });
 
@@ -129,19 +141,10 @@ router.post('/webhook', async (req, res) => {
                         data: { status: 'SUCCESS' }
                     });
 
-                    // Credit Wallet
-                    await tx.wallet.update({
-                        where: { userId: parseInt(userId) },
-                        data: { balance: { increment: amount / 100 } }
-                    });
-
-                    // Notify User (Internal)
-                    await tx.notification.create({
-                        data: {
-                            userId: parseInt(userId),
-                            title: 'Wallet Funded! 💸',
-                            message: `Your account has been successfully credited with ₦${(amount / 100).toLocaleString()}.`
-                        }
+                    // Credit User
+                    await tx.user.update({
+                        where: { id: parseInt(userId) },
+                        data: { walletBalance: { increment: amount / 100 } }
                     });
                 }
             });

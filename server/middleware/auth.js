@@ -26,9 +26,10 @@ export const requireRole = (roles) => (req, res, next) => {
 };
 
 export const isSuperAdmin = requireRole(['SUPERADMIN']);
-export const isFinance = requireRole(['SUPERADMIN', 'FINANCE_ADMIN']);
-export const isOps = requireRole(['SUPERADMIN', 'OPS_ADMIN']);
-export const isSupportAdmin = requireRole(['SUPERADMIN', 'FINANCE_ADMIN', 'OPS_ADMIN', 'SUPPORT_ADMIN']);
+export const isAdmin = requireRole(['SUPERADMIN', 'ADMIN']);
+export const isAccountant = requireRole(['SUPERADMIN', 'ACCOUNTANT']);
+export const anyAdmin = requireRole(['SUPERADMIN', 'ADMIN', 'ACCOUNTANT']);
 
-// Legacy helper for any admin level
-export const isAdmin = isSupportAdmin;
+// Legacy helper compatibility
+export const isOps = isAdmin;
+export const isFinance = isAccountant;

@@ -4,55 +4,91 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-    // Create Packages
-    const packages = [
-        { name: 'STARTER', weeklyAmount: 1000, totalAmount: 45000, foodValue: 0 },
-        { name: 'PRO', weeklyAmount: 5000, totalAmount: 225000, foodValue: 10000 },
-        { name: 'ELITE', weeklyAmount: 10000, totalAmount: 450000, foodValue: 25000 },
+    // 1. Create Tiers
+    const tiers = [
+        { name: 'STARTER', weeklyAmount: 1333.33, onboardingFee: 3000, maintenanceFee: 100, upgradeFee: 0 },
+        { name: 'PRO', weeklyAmount: 1333.33, onboardingFee: 5000, maintenanceFee: 500, upgradeFee: 2000 },
+        { name: 'ELITE', weeklyAmount: 1333.33, onboardingFee: 10000, maintenanceFee: 1000, upgradeFee: 5000 },
     ];
 
-    for (const pkg of packages) {
-        await prisma.package.upsert({
-            where: { name: pkg.name },
-            update: {},
-            create: pkg,
+    console.log('Seeding Tiers...');
+    for (const tier of tiers) {
+        await prisma.tier.upsert({
+            where: { name: tier.name },
+            update: tier,
+            create: tier,
         });
     }
 
-    const password = await bcrypt.hash('password123', 10);
+    const hashedAdminPassword = await bcrypt.hash('admin123', 10);
+    const hashedMemberPassword = await bcrypt.hash('password123', 10);
 
-    // Helper to create user with wallet
-    const createUser = async (email, fName, lName, role, phone) => {
-        return prisma.user.upsert({
-            where: { email },
-            update: {},
-            create: {
-                email,
-                fullName: `${fName} ${lName}`,
-                password,
-                role,
-                phone,
-                kycVerified: true,
-                wallet: {
-                    create: {
-                        balance: 0,
-                        lockedBalance: 0
-                    }
-                }
-            },
-        });
-    };
+    // 2. Create Roles
+    console.log('Seeding Users...');
 
     // Super Admin
-    const superAdmin = await createUser('superadmin@valuehills.com', 'Super', 'Admin', 'SUPERADMIN', '0000000001');
+    await prisma.user.upsert({
+        where: { email: 'superadmin@valuehills.com' },
+        update: {},
+        create: {
+            email: 'superadmin@valuehills.com',
+            password: hashedAdminPassword,
+            firstName: 'Super',
+            lastName: 'Admin',
+            role: 'SUPERADMIN',
+            phone: '0000000001',
+            kycStatus: 'VERIFIED',
+        }
+    });
 
     // Admin
-    const admin = await createUser('admin@valuehills.com', 'Operational', 'Admin', 'ADMIN', '0000000002');
+    await prisma.user.upsert({
+        where: { email: 'admin@valuehills.com' },
+        update: {},
+        create: {
+            email: 'admin@valuehills.com',
+            password: hashedAdminPassword,
+            firstName: 'Operational',
+            lastName: 'Admin',
+            role: 'ADMIN',
+            phone: '0000000002',
+            kycStatus: 'VERIFIED',
+        }
+    });
 
     // Accountant
-    const accountant = await createUser('auditor@valuehills.com', 'Chief', 'Auditor', 'ACCOUNTANT', '0000000003');
+    await prisma.user.upsert({
+        where: { email: 'auditor@valuehills.com' },
+        update: {},
+        create: {
+            email: 'auditor@valuehills.com',
+            password: hashedAdminPassword,
+            firstName: 'Chief',
+            lastName: 'Auditor',
+            role: 'ACCOUNTANT',
+            phone: '0000000003',
+            kycStatus: 'VERIFIED',
+        }
+    });
 
-    console.log({ superAdmin, admin, accountant });
+    // Sample Member
+    const starterTier = await prisma.tier.findUnique({ where: { name: 'STARTER' } });
+    await prisma.user.upsert({
+        where: { email: 'member@example.com' },
+        update: {},
+        create: {
+            email: 'member@example.com',
+            password: hashedMemberPassword,
+            firstName: 'John',
+            lastName: 'Doe',
+            role: 'MEMBER',
+            phone: '08012345678',
+            tierId: starterTier.id,
+            kycStatus: 'PENDING',
+        }
+    });
+
+    console.log('Seed completed successfully.');
 }
 
 main()

@@ -148,7 +148,7 @@ const Signup = () => {
 
                     <div className="text-sm text-slate-500 mt-2 bg-yellow-50 p-3 rounded-lg border border-yellow-100 flex items-center gap-2">
                         <span className="text-yellow-600">ⓘ</span>
-                        <span>Registration Fee: <span className="font-bold text-yellow-700">₦3,000</span> (One-time)</span>
+                        <span>Registration Fee: <span className="font-bold text-yellow-700">₦{tiers.find(t => t.id === parseInt(formData.tierId))?.onboardingFee?.toLocaleString() || '0'}</span> (One-time)</span>
                     </div>
 
                     <button

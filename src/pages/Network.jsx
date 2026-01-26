@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
+import { useAuth } from '../context/AuthContext';
 
 const Network = () => {
+    const { user } = useAuth();
     const [referrals, setReferrals] = useState([]);
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -25,6 +27,8 @@ const Network = () => {
     }, []);
 
     if (loading) return <div className="p-8 text-center text-noble-gray">Loading Network...</div>;
+
+    const referralLink = `${window.location.origin}/signup?ref=${user?.referralCode || 'CODE'}`;
 
     return (
         <div className="font-sans space-y-8 text-white">
@@ -58,7 +62,7 @@ const Network = () => {
                             {referrals.map((ref) => (
                                 <tr key={ref.id} className="hover:bg-white/5 transition-colors">
                                     <td className="px-6 py-4">
-                                        <div className="font-bold text-white">{ref.refereeUser.fullName}</div>
+                                        <div className="font-bold text-white">{ref.refereeUser.firstName} {ref.refereeUser.lastName}</div>
                                         <div className="text-xs text-noble-gray">{ref.refereeUser.email}</div>
                                     </td>
                                     <td className="px-6 py-4 text-noble-gray">
@@ -95,10 +99,16 @@ const Network = () => {
                     <input
                         type="text"
                         readOnly
-                        value="https://valuehills.com/signup?ref=ABC123" // Mock referral link
+                        value={referralLink}
                         className="flex-1 p-3 bg-black/40 rounded-xl border border-white/10 text-primary font-bold font-mono"
                     />
-                    <button className="px-6 py-3 bg-primary text-background font-bold rounded-xl active:scale-95 transition-transform">
+                    <button
+                        onClick={() => {
+                            navigator.clipboard.writeText(referralLink);
+                            alert('Referral Link Copied!');
+                        }}
+                        className="px-6 py-3 bg-primary text-background font-bold rounded-xl active:scale-95 transition-transform"
+                    >
                         Copy Link
                     </button>
                 </div>
