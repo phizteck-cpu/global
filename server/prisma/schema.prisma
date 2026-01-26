@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// 👤 USERS
+model User {
+  id           Int     @id @default(autoincrement()) // Using Int for SQLite ease, typically UUID in Postgres
+  fullName     String
+  email        String  @unique
+  phone        String? @unique
+  password     String
+  role         String  @default("MEMBER") // MEMBER, ADMIN, SUPPORT, SUPERADMIN
+  status       String  @default("ACTIVE") // PENDING, ACTIVE, SUSPENDED
+  referralCode String  @unique @default(uuid())
+  referredBy   Int?
+
+  kycVerified Boolean @default(false)
+  kycDocUrl   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  wallet        Wallet?
+  userPackages  UserPackage[]
+  referrals     Referral[]     @relation("Referrer")
+  referredEntry Referral?      @relation("Referee")
+  bonuses       Bonus[]        @relation("UserBonus")
+  sourceBonuses Bonus[]        @relation("SourceUser")
+  redemptions   Redemption[]
+  notifications Notification[]
+  auditLogs     AuditLog[]     @relation("AdminAction")
+  targetLogs    AuditLog[]     @relation("TargetUser")
+}
+
+// 💼 WALLETS
+model Wallet {
+  id            Int    @id @default(autoincrement())
+  userId        Int    @unique
+  balance       Float  @default(0.0) // Available for withdrawal
+  lockedBalance Float  @default(0.0) // Cooperative Assets / Savings
+  currency      String @default("NGN")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+}
+
+// 💳 TRANSACTIONS
+model Transaction {
+  id              Int     @id @default(autoincrement())
+  walletId        Int
+  type            String // FUNDING, CONTRIBUTION, BONUS, WITHDRAWAL, REFUND, ADMIN_FEE
+  amount          Float
+  reference       String? @unique
+  status          String  @default("SUCCESS") // PENDING, SUCCESS, FAILED
+  paymentProvider String  @default("MANUAL") // PAYSTACK, FLUTTERWAVE, MANUAL
+  metadata        String? // JSON string
+  description     String?
+
+  createdAt DateTime @default(now())
+
+  wallet Wallet @relation(fields: [walletId], references: [id])
+}
+
+// 📦 PACKAGES (formerly Tiers)
+model Package {
+  id             Int     @id @default(autoincrement())
+  name           String  @unique
+  weeklyAmount   Float
+  durationWeeks  Int     @default(45)
+  totalAmount    Float
+  foodValue      Float   @default(0.0) // Value redeemable in food
+  upgradeFee     Float   @default(0.0) // Fee to switch to this tier
+  maintenanceFee Float   @default(0.0) // Admin/Platform fee per cycle/week
+  isActive       Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  userPackages UserPackage[]
+  redemptions  Redemption[]
+}
+
+// 📆 USER PACKAGES (Active Subscriptions)
+model UserPackage {
+  id        Int @id @default(autoincrement())
+  userId    Int
+  packageId Int
+
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+
+  weeksPaid   Int    @default(0)
+  missedCount Int    @default(0)
+  status      String @default("ACTIVE") // ACTIVE, COMPLETED, DEFAULTED, CANCELLED
+
+  createdAt DateTime @default(now())
+
+  user          User           @relation(fields: [userId], references: [id])
+  package       Package        @relation(fields: [packageId], references: [id])
+  contributions Contribution[]
+}
+
+// ⏱️ CONTRIBUTIONS
+model Contribution {
+  id            Int       @id @default(autoincrement())
+  userPackageId Int
+  weekNumber    Int
+  amount        Float
+  status        String    @default("PENDING") // PENDING, PAID, MISSED
+  dueDate       DateTime
+  paidAt        DateTime?
+  attemptCount  Int       @default(0)
+  lastAttemptAt DateTime?
+
+  userPackage UserPackage @relation(fields: [userPackageId], references: [id])
+}
+
+// 👥 REFERRALS
+model Referral {
+  id         Int      @id @default(autoincrement())
+  referrerId Int
+  refereeId  Int      @unique
+  level      Int      @default(1)
+  status     String   @default("PENDING") // PENDING, PAID
+  createdAt  DateTime @default(now())
+
+  referrer    User @relation("Referrer", fields: [referrerId], references: [id])
+  refereeUser User @relation("Referee", fields: [refereeId], references: [id])
+}
+
+// 🎁 BONUSES
+model Bonus {
+  id           Int      @id @default(autoincrement())
+  userId       Int // Receiver
+  sourceUserId Int? // Who triggered the bonus
+  amount       Float
+  type         String // DIRECT, TEAM, LEADERSHIP
+  status       String   @default("PENDING") // PENDING, PAID
+  createdAt    DateTime @default(now())
+
+  user       User  @relation("UserBonus", fields: [userId], references: [id])
+  sourceUser User? @relation("SourceUser", fields: [sourceUserId], references: [id])
+}
+
+// 🍚 FOOD INVENTORY
+model Inventory {
+  id            Int      @id @default(autoincrement())
+  name          String // e.g. Rice 50kg, Oil 5L
+  quantity      Int
+  unit          String // bags, liters
+  priceEstimate Float
+  createdAt     DateTime @default(now())
+}
+
+// 🛒 REDEMPTIONS
+model Redemption {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  packageId       Int? // Optional link to package benefit
+  status          String    @default("REQUESTED") // REQUESTED, APPROVED, DELIVERED, CANCELLED
+  deliveryAddress String
+  requestDate     DateTime  @default(now())
+  processedDate   DateTime?
+
+  user    User     @relation(fields: [userId], references: [id])
+  package Package? @relation(fields: [packageId], references: [id])
+}
+
+// 🔔 NOTIFICATIONS
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// 🔐 AUDIT LOGS
+model AuditLog {
+  id           Int      @id @default(autoincrement())
+  adminId      Int
+  action       String
+  targetUserId Int?
+  details      String
+  ipAddress    String?
+  timestamp    DateTime @default(now())
+
+  admin      User  @relation("AdminAction", fields: [adminId], references: [id])
+  targetUser User? @relation("TargetUser", fields: [targetUserId], references: [id])
+}
+
+// Global System Config
+model SystemConfig {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}

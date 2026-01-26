@@ -1,0 +1,106 @@
+import express from 'express';
+import { PrismaClient } from '@prisma/client';
+import { authenticateToken, isOps } from '../middleware/auth.js';
+
+const prisma = new PrismaClient();
+const router = express.Router();
+
+// GET /inventory - View Available Food Items
+router.get('/inventory', authenticateToken, async (req, res) => {
+    try {
+        const items = await prisma.inventory.findMany({
+            orderBy: { name: 'asc' }
+        });
+        res.json(items);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch inventory' });
+    }
+});
+
+// Admin: Add Inventory Item
+router.post('/inventory', authenticateToken, isOps, async (req, res) => {
+
+    try {
+        const { name, quantity, unit, priceEstimate } = req.body;
+        const newItem = await prisma.inventory.create({
+            data: {
+                name,
+                quantity: parseInt(quantity),
+                unit,
+                priceEstimate: parseFloat(priceEstimate)
+            }
+        });
+        res.status(201).json(newItem);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to add inventory' });
+    }
+});
+
+// POST /redemptions - Redeem Food
+router.post('/redemptions', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { inventoryId, deliveryAddress } = req.body;
+
+        // 1. Get Inventory Item
+        const item = await prisma.inventory.findUnique({ where: { id: parseInt(inventoryId) } });
+        if (!item || item.quantity < 1) {
+            return res.status(400).json({ error: 'Item out of stock or invalid' });
+        }
+
+        // 2. Check Active Package
+        const userPackage = await prisma.userPackage.findFirst({
+            where: { userId, status: 'ACTIVE' },
+            include: { package: true }
+        });
+
+        if (!userPackage) {
+            return res.status(400).json({ error: 'No active package found. Please subscribe first.' });
+        }
+
+        // 3. Create Request
+        await prisma.$transaction(async (tx) => {
+            // Log Request
+            await tx.redemption.create({
+                data: {
+                    userId,
+                    packageId: userPackage.packageId,
+                    status: 'REQUESTED',
+                    deliveryAddress: `${deliveryAddress} [ITEM: ${item.name} | Qty: 1]`
+                }
+            });
+
+            // Ideally decrement inventory on approval, or reserve now.
+            // Let's reserve now to prevent overselling.
+            await tx.inventory.update({
+                where: { id: item.id },
+                data: { quantity: { decrement: 1 } }
+            });
+        });
+
+        res.status(201).json({ message: 'Redemption request submitted successfully' });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Request failed' });
+    }
+});
+
+// GET /redemptions - My Redemptions
+router.get('/redemptions', authenticateToken, async (req, res) => {
+    try {
+        const history = await prisma.redemption.findMany({
+            where: { userId: req.user.userId },
+            orderBy: { requestDate: 'desc' },
+            include: { package: true }
+        });
+        res.json(history);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch history' });
+    }
+});
+
+export default router;
