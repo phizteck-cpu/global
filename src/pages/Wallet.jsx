@@ -15,6 +15,7 @@ const Wallet = () => {
     const [accountNumber, setAccountNumber] = useState('');
     const [accountName, setAccountName] = useState('');
     const [isPriority, setIsPriority] = useState(false);
+    const [pin, setPin] = useState('');
 
     const [msg, setMsg] = useState('');
     const [loading, setLoading] = useState(false);
@@ -45,7 +46,8 @@ const Wallet = () => {
                     bankName,
                     accountNumber,
                     accountName,
-                    isPriority
+                    isPriority,
+                    pin
                 });
                 setMsg('Withdrawal request submitted successfully.');
                 setAmount('');
@@ -139,6 +141,20 @@ const Wallet = () => {
                                         {isPriority && <span className="text-black text-xs">✓</span>}
                                     </div>
                                 </div>
+
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-bold text-noble-gray mb-2">Security PIN</label>
+                                    <input
+                                        type="password"
+                                        required
+                                        maxLength={6}
+                                        value={pin}
+                                        onChange={(e) => setPin(e.target.value)}
+                                        className="w-full p-4 bg-background rounded-xl border border-white/10 focus:border-secondary/50 text-white font-mono tracking-widest text-center text-lg"
+                                        placeholder="••••••"
+                                    />
+                                    <p className="text-[10px] text-center text-noble-gray">Enter your 4-6 digit transaction PIN</p>
+                                </div>
                             </>
                         )}
 
@@ -160,7 +176,7 @@ const Wallet = () => {
                     </form>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

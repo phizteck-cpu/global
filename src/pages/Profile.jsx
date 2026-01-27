@@ -14,7 +14,12 @@ import {
     CheckCircle2,
     AlertCircle,
     Fingerprint,
-    ShieldCheck
+    ShieldCheck,
+    X,
+    Lock,
+    Hash,
+    UserCircle,
+    Edit3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
@@ -28,11 +33,26 @@ const Profile = () => {
     const [kycFile, setKycFile] = useState('');
     const [msg, setMsg] = useState('');
 
+    const [showSecurityModal, setShowSecurityModal] = useState(false);
+    const [securityTab, setSecurityTab] = useState('PASSWORD'); // PASSWORD, PIN
+    const [passData, setPassData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    const [pinData, setPinData] = useState({ currentPin: '', newPin: '', password: '' });
+    const [securityMsg, setSecurityMsg] = useState({ text: '', type: '' });
+
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editData, setEditData] = useState({ firstName: '', lastName: '', phone: '' });
+    const [editMsg, setEditMsg] = useState({ text: '', type: '' });
+
     useEffect(() => {
         const fetchProfile = async () => {
             try {
                 const res = await api.get('/users/me');
                 setProfile(res.data);
+                setEditData({
+                    firstName: res.data.firstName || '',
+                    lastName: res.data.lastName || '',
+                    phone: res.data.phone || ''
+                });
             } catch (error) {
                 console.error('Failed to fetch profile');
             } finally {
@@ -51,6 +71,50 @@ const Profile = () => {
             setProfile(res.data);
         } catch (error) {
             setMsg('Protocol Error: Upload Failed.');
+        }
+    };
+
+    const handlePasswordChange = async (e) => {
+        e.preventDefault();
+        setSecurityMsg({ text: '', type: '' });
+        if (passData.newPassword !== passData.confirmPassword) {
+            setSecurityMsg({ text: 'Passwords do not match', type: 'error' });
+            return;
+        }
+        try {
+            await api.post('/users/me/change-password', passData);
+            setSecurityMsg({ text: 'Password updated successfully', type: 'success' });
+            setPassData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        } catch (error) {
+            setSecurityMsg({ text: error.response?.data?.error || 'Update failed', type: 'error' });
+        }
+    };
+
+    const handlePinUpdate = async (e) => {
+        e.preventDefault();
+        setSecurityMsg({ text: '', type: '' });
+        try {
+            await api.post('/users/me/update-pin', pinData);
+            setSecurityMsg({ text: 'Transaction PIN updated', type: 'success' });
+            setPinData({ currentPin: '', newPin: '', password: '' });
+        } catch (error) {
+            setSecurityMsg({ text: error.response?.data?.error || 'Update failed', type: 'error' });
+        }
+    };
+
+    const handleUpdateProfile = async (e) => {
+        e.preventDefault();
+        setEditMsg({ text: '', type: '' });
+        try {
+            const res = await api.patch('/users/me', editData);
+            setProfile({ ...profile, ...res.data });
+            setEditMsg({ text: 'Identity records updated successfully.', type: 'success' });
+            setTimeout(() => {
+                setShowEditModal(false);
+                setEditMsg({ text: '', type: '' });
+            }, 2000);
+        } catch (error) {
+            setEditMsg({ text: error.response?.data?.error || 'Update failed', type: 'error' });
         }
     };
 
@@ -90,11 +154,19 @@ const Profile = () => {
                     </div>
                 </div>
                 <div className="relative z-10">
-                    <div className={`px-6 py-3 rounded-2xl border flex items-center gap-3 ${isKycVerified ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-amber-500/10 border-amber-500/20 text-amber-500'}`}>
-                        {isKycVerified ? <ShieldCheck size={16} /> : <AlertCircle size={16} />}
-                        <span className="text-[10px] font-black uppercase tracking-widest">
-                            {isKycVerified ? 'Security Verified' : 'Security Pending'}
-                        </span>
+                    <div className="flex flex-col gap-4 items-end">
+                        <div className={`px-6 py-3 rounded-2xl border flex items-center gap-3 ${isKycVerified ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-amber-500/10 border-amber-500/20 text-amber-500'}`}>
+                            {isKycVerified ? <ShieldCheck size={16} /> : <AlertCircle size={16} />}
+                            <span className="text-[10px] font-black uppercase tracking-widest">
+                                {isKycVerified ? 'Security Verified' : 'Security Pending'}
+                            </span>
+                        </div>
+                        <button
+                            onClick={() => setShowEditModal(true)}
+                            className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border border-white/5 transition-all"
+                        >
+                            <Edit3 size={12} /> Edit Personal Records
+                        </button>
                     </div>
                 </div>
             </div>
@@ -109,6 +181,7 @@ const Profile = () => {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                            <ProfileItem label="Institutional Username" value={`@${profile.username}`} icon={<Fingerprint size={14} />} />
                             <ProfileItem label="Electronic Mail" value={profile.email} icon={<Mail size={14} />} />
                             <ProfileItem label="Voice Protocol" value={profile.phone || 'NOT LINKED'} icon={<Phone size={14} />} />
                             <ProfileItem label="Citizenship Status" value="NIGERIAN (RESIDENT)" icon={<Globe size={14} />} />
@@ -191,7 +264,10 @@ const Profile = () => {
                     </div>
 
                     <div className="space-y-4">
-                        <button className="w-full flex items-center justify-between p-6 glass-card rounded-2xl border-white/5 text-white hover:bg-white/5 hover:border-primary/30 transition-all text-xs font-black uppercase tracking-widest">
+                        <button
+                            onClick={() => { setShowSecurityModal(true); setSecurityMsg({ text: '', type: '' }); }}
+                            className="w-full flex items-center justify-between p-6 glass-card rounded-2xl border-white/5 text-white hover:bg-white/5 hover:border-primary/30 transition-all text-xs font-black uppercase tracking-widest"
+                        >
                             Security Settings <Key size={14} className="text-noble-gray" />
                         </button>
                         <button className="w-full flex items-center justify-between p-6 glass-card rounded-2xl border-white/5 text-white hover:bg-white/5 hover:border-primary/30 transition-all text-xs font-black uppercase tracking-widest">
@@ -214,6 +290,224 @@ const Profile = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Security Settings Modal */}
+            <AnimatePresence>
+                {showSecurityModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-xl"
+                            onClick={() => setShowSecurityModal(false)}
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-lg bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
+                        >
+                            <div className="flex items-center justify-between mb-8">
+                                <h3 className="text-2xl font-black font-heading text-white tracking-tighter">Security Protocols</h3>
+                                <button onClick={() => setShowSecurityModal(false)} className="text-noble-gray hover:text-white transition-colors">
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <div className="flex gap-4 mb-8">
+                                <button
+                                    onClick={() => { setSecurityTab('PASSWORD'); setSecurityMsg({ text: '', type: '' }); }}
+                                    className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${securityTab === 'PASSWORD' ? 'bg-primary text-black' : 'bg-white/5 text-noble-gray'}`}
+                                >
+                                    Access Key
+                                </button>
+                                <button
+                                    onClick={() => { setSecurityTab('PIN'); setSecurityMsg({ text: '', type: '' }); }}
+                                    className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${securityTab === 'PIN' ? 'bg-secondary text-black' : 'bg-white/5 text-noble-gray'}`}
+                                >
+                                    Transaction PIN
+                                </button>
+                            </div>
+
+                            {securityMsg.text && (
+                                <div className={`mb-6 p-4 rounded-xl text-xs font-bold flex items-center gap-2 ${securityMsg.type === 'success' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                                    <AlertCircle size={14} />
+                                    {securityMsg.text}
+                                </div>
+                            )}
+
+                            {securityTab === 'PASSWORD' ? (
+                                <form onSubmit={handlePasswordChange} className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-noble-gray ml-2">Current Access Key</label>
+                                        <div className="relative">
+                                            <Lock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-noble-gray" />
+                                            <input
+                                                type="password"
+                                                required
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl p-4 pl-12 text-white outline-none focus:border-primary/50 transition-all"
+                                                placeholder="••••••••"
+                                                value={passData.currentPassword}
+                                                onChange={e => setPassData({ ...passData, currentPassword: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-noble-gray ml-2">New Access Key</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-primary/50 transition-all"
+                                            placeholder="••••••••"
+                                            value={passData.newPassword}
+                                            onChange={e => setPassData({ ...passData, newPassword: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-noble-gray ml-2">Confirm New Key</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-primary/50 transition-all"
+                                            placeholder="••••••••"
+                                            value={passData.confirmPassword}
+                                            onChange={e => setPassData({ ...passData, confirmPassword: e.target.value })}
+                                        />
+                                    </div>
+                                    <button className="w-full py-4 bg-primary text-black font-black uppercase tracking-tighter rounded-xl mt-6 hover:shadow-lg transition-all active:scale-[0.98]">
+                                        Update Access Key
+                                    </button>
+                                </form>
+                            ) : (
+                                <form onSubmit={handlePinUpdate} className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-noble-gray ml-2">Legacy PIN (Optional)</label>
+                                        <div className="relative">
+                                            <Hash size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-noble-gray" />
+                                            <input
+                                                type="password"
+                                                maxLength={6}
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl p-4 pl-12 text-white outline-none focus:border-secondary/50 transition-all font-mono tracking-widest"
+                                                placeholder="Leave blank if first time"
+                                                value={pinData.currentPin}
+                                                onChange={e => setPinData({ ...pinData, currentPin: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-noble-gray ml-2">New Security PIN (4-6 Digits)</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            maxLength={6}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-secondary/50 transition-all font-mono tracking-widest"
+                                            placeholder="••••••"
+                                            value={pinData.newPin}
+                                            onChange={e => setPinData({ ...pinData, newPin: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-noble-gray ml-2">Confirm with Access Key</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-secondary/50 transition-all"
+                                            placeholder="Your login password"
+                                            value={pinData.password}
+                                            onChange={e => setPinData({ ...pinData, password: e.target.value })}
+                                        />
+                                    </div>
+                                    <button className="w-full py-4 bg-secondary text-black font-black uppercase tracking-tighter rounded-xl mt-6 hover:shadow-lg transition-all active:scale-[0.98]">
+                                        Secure Transaction PIN
+                                    </button>
+                                </form>
+                            )}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Edit Profile Modal */}
+            <AnimatePresence>
+                {showEditModal && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-xl"
+                            onClick={() => setShowEditModal(false)}
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-lg bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
+                        >
+                            <div className="flex items-center justify-between mb-8">
+                                <h3 className="text-2xl font-black font-heading text-white tracking-tighter">Identity Management</h3>
+                                <button onClick={() => setShowEditModal(false)} className="text-noble-gray hover:text-white transition-colors">
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            {editMsg.text && (
+                                <div className={`mb-6 p-4 rounded-xl text-xs font-bold flex items-center gap-2 ${editMsg.type === 'success' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                                    <AlertCircle size={14} />
+                                    {editMsg.text}
+                                </div>
+                            )}
+
+                            <form onSubmit={handleUpdateProfile} className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-noble-gray ml-2">First Name</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-primary/50 transition-all"
+                                            value={editData.firstName}
+                                            onChange={e => setEditData({ ...editData, firstName: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-noble-gray ml-2">Last Name</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-primary/50 transition-all"
+                                            value={editData.lastName}
+                                            onChange={e => setEditData({ ...editData, lastName: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-noble-gray ml-2">Electronic Mail (Protected)</label>
+                                    <input
+                                        type="email"
+                                        disabled
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white opacity-50 cursor-not-allowed"
+                                        value={profile.email}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-noble-gray ml-2">Voice Protocol (Phone)</label>
+                                    <input
+                                        type="tel"
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-primary/50 transition-all"
+                                        value={editData.phone}
+                                        onChange={e => setEditData({ ...editData, phone: e.target.value })}
+                                    />
+                                </div>
+                                <button className="w-full py-4 bg-primary text-black font-black uppercase tracking-tighter rounded-xl mt-6 hover:shadow-lg transition-all active:scale-[0.98]">
+                                    Synchronize Identity
+                                </button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

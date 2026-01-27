@@ -92,7 +92,8 @@ const AdminUsers = () => {
 
     const filteredUsers = users.filter(u =>
         (u.firstName + ' ' + u.lastName).toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.username?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     if (loading) {
@@ -168,7 +169,11 @@ const AdminUsers = () => {
                                             </div>
                                             <div>
                                                 <p className="text-xl font-black text-white tracking-tight leading-none">{u.firstName} {u.lastName}</p>
-                                                <p className="text-xs text-noble-gray mt-2 font-mono tracking-tighter italic">{u.email}</p>
+                                                <div className="flex gap-2 text-[10px] text-noble-gray mt-2 font-mono tracking-tighter italic">
+                                                    <span>@{u.username}</span>
+                                                    <span>|</span>
+                                                    <span>{u.email}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
@@ -263,7 +268,7 @@ const AdminUsers = () => {
                                     <div>
                                         <h3 className="text-4xl font-black text-white font-heading tracking-tighter leading-none mb-2">{profileData.firstName} {profileData.lastName}</h3>
                                         <div className="flex items-center gap-4">
-                                            <p className="text-noble-gray font-mono text-sm tracking-widest">{profileData.email}</p>
+                                            <p className="text-noble-gray font-mono text-sm tracking-widest">@{profileData.username} | {profileData.email}</p>
                                             <span className="w-1.5 h-1.5 bg-noble-gray rounded-full opacity-30" />
                                             <p className="text-primary text-[10px] font-black uppercase tracking-[0.2em]">{profileData.role} RECORD</p>
                                         </div>

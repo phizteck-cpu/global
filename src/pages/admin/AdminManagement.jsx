@@ -17,7 +17,7 @@ const AdminManagement = () => {
     const [admins, setAdmins] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showAddModal, setShowAddModal] = useState(false);
-    const [newAdmin, setNewAdmin] = useState({ fullName: '', email: '', password: '', role: 'ADMIN' });
+    const [newAdmin, setNewAdmin] = useState({ fullName: '', email: '', username: '', password: '', role: 'ADMIN' });
     const [msg, setMsg] = useState('');
 
     useEffect(() => {
@@ -41,7 +41,7 @@ const AdminManagement = () => {
             await api.post('/admin/register', newAdmin);
             setMsg('New Staff Account Provisioned Successfully.');
             setShowAddModal(false);
-            setNewAdmin({ fullName: '', email: '', password: '', role: 'ADMIN' });
+            setNewAdmin({ fullName: '', email: '', username: '', password: '', role: 'ADMIN' });
             fetchAdmins();
             setTimeout(() => setMsg(''), 5000);
         } catch (error) {
@@ -106,7 +106,11 @@ const AdminManagement = () => {
                                             </div>
                                             <div>
                                                 <p className="font-bold text-white text-lg">{staff.fullName}</p>
-                                                <p className="text-xs text-noble-gray font-mono">{staff.email}</p>
+                                                <div className="flex gap-2 text-xs text-noble-gray font-mono">
+                                                    <span>@{staff.username}</span>
+                                                    <span>|</span>
+                                                    <span>{staff.email}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
@@ -165,16 +169,29 @@ const AdminManagement = () => {
                                         onChange={e => setNewAdmin({ ...newAdmin, fullName: e.target.value })}
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] uppercase tracking-widest font-black text-noble-gray ml-2">Operational Email</label>
-                                    <input
-                                        required
-                                        type="email"
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white focus:border-red-500/50 outline-none text-sm font-bold transition-all"
-                                        placeholder="james.h@valuehills.io"
-                                        value={newAdmin.email}
-                                        onChange={e => setNewAdmin({ ...newAdmin, email: e.target.value })}
-                                    />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] uppercase tracking-widest font-black text-noble-gray ml-2">Operational Email</label>
+                                        <input
+                                            required
+                                            type="email"
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white focus:border-red-500/50 outline-none text-sm font-bold transition-all"
+                                            placeholder="james.h@valuehills.io"
+                                            value={newAdmin.email}
+                                            onChange={e => setNewAdmin({ ...newAdmin, email: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] uppercase tracking-widest font-black text-noble-gray ml-2">System Username</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white focus:border-red-500/50 outline-none text-sm font-bold transition-all"
+                                            placeholder="j_holden"
+                                            value={newAdmin.username}
+                                            onChange={e => setNewAdmin({ ...newAdmin, username: e.target.value })}
+                                        />
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] uppercase tracking-widest font-black text-noble-gray ml-2">Temporary Access Key</label>

@@ -1,4 +1,5 @@
 import express from 'express';
+import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.js';
 import { initializeTransaction } from '../services/paymentService.js';
@@ -69,10 +70,19 @@ router.post('/fund', authenticateToken, async (req, res) => {
 // This endpoint specifically for the VIRTUAL wallet (Operating/Earnings)
 router.post('/withdraw', authenticateToken, async (req, res) => {
     try {
-        const { amount, bankName, accountNumber, accountName } = req.body;
+        const { amount, bankName, accountNumber, accountName, pin } = req.body;
         const userId = req.user.userId;
 
         const user = await prisma.user.findUnique({ where: { id: userId } });
+
+        if (!user.transactionPin) {
+            return res.status(400).json({ error: 'Transaction PIN not set. Please set it in profile settings.' });
+        }
+
+        const isPinMatch = await bcrypt.compare(pin, user.transactionPin);
+        if (!isPinMatch) {
+            return res.status(400).json({ error: 'Incorrect Transaction PIN' });
+        }
 
         if (user.walletBalance < amount) {
             return res.status(400).json({ error: 'Insufficient wallet balance' });

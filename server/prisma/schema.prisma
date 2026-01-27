@@ -11,14 +11,16 @@ datasource db {
 // 2. USER ROLES & PERMISSIONS
 // -----------------------------------------------------------------------------
 model User {
-  id        Int     @id @default(autoincrement())
-  email     String  @unique
-  password  String
-  firstName String
-  lastName  String
-  phone     String? @unique
-  role      String  @default("MEMBER") // MEMBER, ADMIN, SUPERADMIN, ACCOUNTANT
-  status    String  @default("ACTIVE") // ACTIVE, SUSPENDED, PENDING_KYC
+  id             Int     @id @default(autoincrement())
+  email          String  @unique
+  username       String  @unique
+  password       String
+  firstName      String
+  lastName       String
+  phone          String? @unique
+  role           String  @default("MEMBER") // MEMBER, ADMIN, SUPERADMIN, ACCOUNTANT
+  status         String  @default("ACTIVE") // ACTIVE, SUSPENDED, PENDING_KYC
+  transactionPin String? // 4-6 digit encrypted PIN for sensitive operations
 
   // KYC & Identification
   kycDocUrl String?

@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { ShieldCheck, Lock, Mail } from 'lucide-react';
 
 const AdminLogin = () => {
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -16,7 +16,7 @@ const AdminLogin = () => {
         setError('');
         setLoading(true);
 
-        const result = await login(email, password);
+        const result = await login(username, password);
 
         if (result.success) {
             const adminRoles = ['ADMIN', 'SUPERADMIN', 'FINANCE_ADMIN', 'OPS_ADMIN', 'SUPPORT_ADMIN'];
@@ -87,18 +87,18 @@ const AdminLogin = () => {
 
                     <form onSubmit={handleLogin} className="space-y-5">
                         <div className="space-y-1">
-                            <label className="text-xs font-bold uppercase tracking-widest text-noble-gray ml-1">Work Email</label>
+                            <label className="text-xs font-bold uppercase tracking-widest text-noble-gray ml-1">Work Username</label>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-noble-gray group-focus-within:text-red-500 transition-colors">
                                     <Mail size={18} />
                                 </div>
                                 <input
-                                    type="email"
+                                    type="text"
                                     required
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
                                     className="w-full pl-12 pr-5 py-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-red-500/50 focus:ring-4 focus:ring-red-500/5 transition-all text-white placeholder-white/20"
-                                    placeholder="admin@valuehills.com"
+                                    placeholder="admin_username"
                                 />
                             </div>
                         </div>

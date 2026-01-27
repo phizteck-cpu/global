@@ -9,6 +9,7 @@ const Redeem = () => {
     const [loading, setLoading] = useState(true);
     const [selectedItem, setSelectedItem] = useState(null);
     const [address, setAddress] = useState('');
+    const [pin, setPin] = useState('');
     const [msg, setMsg] = useState('');
     const [msgType, setMsgType] = useState('success');
 
@@ -38,12 +39,14 @@ const Redeem = () => {
         try {
             await api.post('/redemptions', {
                 inventoryId: selectedItem.id,
-                deliveryAddress: address
+                deliveryAddress: address,
+                pin
             });
             setMsg('Redemption request submitted! Our fulfillment team will contact you shortly.');
             setMsgType('success');
             setSelectedItem(null);
             setAddress('');
+            setPin('');
             fetchData();
             setTimeout(() => setMsg(''), 5000);
         } catch (error) {
@@ -170,8 +173,8 @@ const Redeem = () => {
                                     </td>
                                     <td className="px-8 py-6 text-right">
                                         <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${record.status === 'DELIVERED' ? 'bg-primary/10 text-primary border-primary/20' :
-                                                record.status === 'REQUESTED' ? 'bg-secondary/10 text-secondary border-secondary/20' :
-                                                    'bg-red-500/10 text-red-500 border-red-500/20'
+                                            record.status === 'REQUESTED' ? 'bg-secondary/10 text-secondary border-secondary/20' :
+                                                'bg-red-500/10 text-red-500 border-red-500/20'
                                             }`}>
                                             {record.status}
                                         </span>
@@ -224,6 +227,20 @@ const Redeem = () => {
                                         className="w-full p-6 bg-white/5 rounded-3xl border border-white/10 focus:border-primary/50 text-white h-32 outline-none focus:ring-4 focus:ring-primary/5 transition-all text-sm leading-relaxed"
                                         placeholder="Enter full delivery coordinates or preferred ValueHills pickup hub..."
                                     ></textarea>
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-black text-noble-gray ml-2">
+                                        Security Transaction PIN
+                                    </label>
+                                    <input
+                                        type="password"
+                                        required
+                                        maxLength={6}
+                                        value={pin}
+                                        onChange={(e) => setPin(e.target.value)}
+                                        className="w-full p-4 bg-white/5 rounded-2xl border border-white/10 focus:border-primary/50 text-white outline-none text-center font-mono tracking-widest text-lg"
+                                        placeholder="••••••"
+                                    />
                                 </div>
                                 <button type="submit" className="w-full py-5 bg-primary text-black font-black uppercase tracking-tighter text-lg rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/20">
                                     Finalize Redemption

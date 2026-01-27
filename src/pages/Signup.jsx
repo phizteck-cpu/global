@@ -11,6 +11,7 @@ const Signup = () => {
         firstName: '',
         lastName: '',
         email: '',
+        username: '',
         phone: '',
         password: '',
         tierId: ''
@@ -107,6 +108,20 @@ const Signup = () => {
                             />
                         </div>
                         <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                            <input
+                                type="text"
+                                name="username"
+                                required
+                                className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-green/20 focus:border-brand-green outline-none transition-all bg-white/50"
+                                placeholder="johndoe123"
+                                onChange={handleChange}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
                             <input
                                 type="tel"
@@ -117,18 +132,17 @@ const Signup = () => {
                                 onChange={handleChange}
                             />
                         </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-                        <input
-                            type="password"
-                            name="password"
-                            required
-                            className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-green/20 focus:border-brand-green outline-none transition-all bg-white/50"
-                            placeholder="••••••••"
-                            onChange={handleChange}
-                        />
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                            <input
+                                type="password"
+                                name="password"
+                                required
+                                className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-brand-green/20 focus:border-brand-green outline-none transition-all bg-white/50"
+                                placeholder="••••••••"
+                                onChange={handleChange}
+                            />
+                        </div>
                     </div>
 
                     {/* Tier Selection */}

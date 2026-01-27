@@ -1,4 +1,5 @@
 import express from 'express';
+import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, isSuperAdmin, isAdmin, isFinance, isOps, anyAdmin } from '../middleware/auth.js';
 
@@ -65,8 +66,8 @@ router.get('/audit-logs', authenticateToken, isSuperAdmin, async (req, res) => {
             orderBy: { timestamp: 'desc' },
             take: 50,
             include: {
-                admin: { select: { email: true, firstName: true, lastName: true } },
-                targetUser: { select: { email: true, firstName: true, lastName: true } }
+                admin: { select: { email: true, username: true, firstName: true, lastName: true } },
+                targetUser: { select: { email: true, username: true, firstName: true, lastName: true } }
             }
         });
         res.json(logs);
@@ -176,9 +177,73 @@ router.post('/impersonate/:id', authenticateToken, isSuperAdmin, async (req, res
             }
         });
 
-        res.json({ token, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, isImpersonating: true } });
+        res.json({ token, user: { id: user.id, email: user.email, username: user.username, firstName: user.firstName, lastName: user.lastName, role: user.role, isImpersonating: true } });
     } catch (error) {
         res.status(500).json({ error: 'Impersonation failed' });
+    }
+});
+
+// Super Admin Control: Register Staff
+router.post('/register', authenticateToken, isSuperAdmin, async (req, res) => {
+    try {
+        const { firstName, lastName, fullName, email, username, password, role } = req.body;
+
+        // Use fullName to split if firstName/lastName not provided (compat with frontend)
+        let fName = firstName;
+        let lName = lastName;
+        if (!fName && fullName) {
+            [fName, ...lName] = fullName.split(' ');
+            lName = lName.join(' ');
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newStaff = await prisma.user.create({
+            data: {
+                firstName: fName || 'Staff',
+                lastName: lName || 'Member',
+                email,
+                username,
+                password: hashedPassword,
+                role: role || 'ADMIN',
+                kycStatus: 'VERIFIED'
+            }
+        });
+
+        res.status(201).json({ message: 'Staff created', user: { id: newStaff.id, username: newStaff.username, email: newStaff.email, role: newStaff.role } });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to register staff: ' + (error.code === 'P2002' ? 'Email or Username already exists' : error.message) });
+    }
+});
+
+// Super Admin Control: Get All Staff
+router.get('/staff', authenticateToken, isSuperAdmin, async (req, res) => {
+    try {
+        const staff = await prisma.user.findMany({
+            where: {
+                role: { in: ['ADMIN', 'SUPERADMIN', 'FINANCE_ADMIN', 'OPS_ADMIN', 'SUPPORT_ADMIN', 'ACCOUNTANT'] }
+            },
+            select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                username: true,
+                role: true,
+                createdAt: true
+            }
+        });
+
+        // Add fullName for frontend compatibility
+        const staffWithFullName = staff.map(s => ({
+            ...s,
+            fullName: `${s.firstName} ${s.lastName}`
+        }));
+
+        res.json(staffWithFullName);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch staff' });
     }
 });
 

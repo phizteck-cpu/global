@@ -32,6 +32,7 @@ async function main() {
         update: {},
         create: {
             email: 'superadmin@valuehills.com',
+            username: 'superadmin',
             password: hashedAdminPassword,
             firstName: 'Super',
             lastName: 'Admin',
@@ -47,6 +48,7 @@ async function main() {
         update: {},
         create: {
             email: 'admin@valuehills.com',
+            username: 'admin',
             password: hashedAdminPassword,
             firstName: 'Operational',
             lastName: 'Admin',
@@ -62,6 +64,7 @@ async function main() {
         update: {},
         create: {
             email: 'auditor@valuehills.com',
+            username: 'auditor',
             password: hashedAdminPassword,
             firstName: 'Chief',
             lastName: 'Auditor',
@@ -78,6 +81,7 @@ async function main() {
         update: {},
         create: {
             email: 'member@example.com',
+            username: 'member123',
             password: hashedMemberPassword,
             firstName: 'John',
             lastName: 'Doe',

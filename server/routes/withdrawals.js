@@ -1,4 +1,5 @@
 import express from 'express';
+import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, isFinance } from '../middleware/auth.js';
 
@@ -21,7 +22,7 @@ router.get('/', authenticateToken, isFinance, async (req, res) => {
 // POST /withdrawals/request - Submit Withdrawal Request
 router.post('/request', authenticateToken, async (req, res) => {
     try {
-        const { amount } = req.body;
+        const { amount, pin } = req.body;
         const userId = req.user.userId;
 
         const user = await prisma.user.findUnique({
@@ -35,6 +36,15 @@ router.post('/request', authenticateToken, async (req, res) => {
                 }
             }
         });
+
+        if (!user.transactionPin) {
+            return res.status(400).json({ error: 'Transaction PIN not set. Please set it in profile settings.' });
+        }
+
+        const isPinMatch = await bcrypt.compare(pin, user.transactionPin);
+        if (!isPinMatch) {
+            return res.status(400).json({ error: 'Incorrect Transaction PIN' });
+        }
 
         // 3.5 Eligibility & Lock Logic
         const joinDate = new Date(user.joinDate);

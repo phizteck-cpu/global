@@ -35,7 +35,8 @@ const AdminAudit = () => {
     const filteredLogs = logs.filter(l =>
         l.action?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         l.details?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        l.admin?.fullName?.toLowerCase().includes(searchTerm.toLowerCase())
+        l.admin?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        l.targetUser?.username?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     if (loading) {
@@ -139,10 +140,10 @@ const AdminAudit = () => {
                                         </td>
                                         <td className="px-8 py-6">
                                             <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${log.action.includes('APPROVE') || log.action.includes('PAY')
-                                                    ? 'bg-primary/10 text-primary border-primary/20'
-                                                    : log.action.includes('REJECT') || log.action.includes('SUSPEND')
-                                                        ? 'bg-red-500/10 text-red-500 border-red-500/20'
-                                                        : 'bg-secondary/10 text-secondary border-secondary/20'
+                                                ? 'bg-primary/10 text-primary border-primary/20'
+                                                : log.action.includes('REJECT') || log.action.includes('SUSPEND')
+                                                    ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                                                    : 'bg-secondary/10 text-secondary border-secondary/20'
                                                 }`}>
                                                 {log.action}
                                             </span>
@@ -152,7 +153,7 @@ const AdminAudit = () => {
                                                 {log.targetUser ? (
                                                     <>
                                                         <p className="text-xs font-bold text-white truncate">{log.targetUser.fullName}</p>
-                                                        <p className="text-[10px] text-noble-gray truncate">{log.targetUser.email}</p>
+                                                        <p className="text-[10px] text-noble-gray truncate">@{log.targetUser.username} | {log.targetUser.email}</p>
                                                     </>
                                                 ) : (
                                                     <p className="text-[10px] text-noble-gray italic">Global System Parameter</p>

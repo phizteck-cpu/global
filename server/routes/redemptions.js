@@ -1,4 +1,5 @@
 import express from 'express';
+import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, isOps } from '../middleware/auth.js';
 
@@ -42,7 +43,7 @@ router.post('/inventory', authenticateToken, isOps, async (req, res) => {
 router.post('/redemptions', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.userId;
-        const { inventoryId, deliveryAddress } = req.body;
+        const { inventoryId, deliveryAddress, pin } = req.body;
 
         // 1. Get Store Item
         const item = await prisma.inventory.findUnique({ where: { id: parseInt(inventoryId) } });
@@ -50,11 +51,19 @@ router.post('/redemptions', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Item out of stock or invalid' });
         }
 
-        // 2. Check User Tier
         const user = await prisma.user.findUnique({
             where: { id: userId },
             include: { tier: true }
         });
+
+        if (!user.transactionPin) {
+            return res.status(400).json({ error: 'Transaction PIN not set. Please set it in profile settings.' });
+        }
+
+        const isPinMatch = await bcrypt.compare(pin, user.transactionPin);
+        if (!isPinMatch) {
+            return res.status(400).json({ error: 'Incorrect Transaction PIN' });
+        }
 
         if (!user.tier) {
             return res.status(400).json({ error: 'Active membership tier required.' });

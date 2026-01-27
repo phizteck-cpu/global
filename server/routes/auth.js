@@ -9,19 +9,20 @@ const prisma = new PrismaClient();
 // Register
 router.post('/signup', async (req, res) => {
     try {
-        const { firstName, lastName, email, phone, password, tierId, referralCode } = req.body;
+        const { firstName, lastName, email, username, phone, password, tierId, referralCode } = req.body;
 
         // Check if user exists
         const existingUser = await prisma.user.findFirst({
             where: {
                 OR: [
                     { email },
+                    { username },
                     { phone: phone || undefined }
                 ]
             }
         });
         if (existingUser) {
-            return res.status(400).json({ message: 'User with this email or phone already exists' });
+            return res.status(400).json({ message: 'User with this email, username or phone already exists' });
         }
 
         // Validate Referral Code (Optional)
@@ -51,6 +52,7 @@ router.post('/signup', async (req, res) => {
                     firstName,
                     lastName,
                     email,
+                    username,
                     phone,
                     password: hashedPassword,
                     status: "ACTIVE",
@@ -84,6 +86,7 @@ router.post('/signup', async (req, res) => {
             user: {
                 id: user.id,
                 email: user.email,
+                username: user.username,
                 firstName: user.firstName,
                 lastName: user.lastName,
                 role: user.role,
@@ -99,10 +102,10 @@ router.post('/signup', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { username, password } = req.body;
 
         const user = await prisma.user.findUnique({
-            where: { email },
+            where: { username },
             include: { tier: true }
         });
 
@@ -122,6 +125,7 @@ router.post('/login', async (req, res) => {
             user: {
                 id: user.id,
                 email: user.email,
+                username: user.username,
                 firstName: user.firstName,
                 lastName: user.lastName,
                 role: user.role,
