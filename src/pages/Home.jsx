@@ -54,7 +54,7 @@ const Home = () => {
               <div className="flex justify-between items-center mb-8">
                 <div>
                   <p className="text-noble-gray text-xs uppercase tracking-wider font-bold">Cooperative Assets</p>
-                  <h3 className="text-5xl font-bold text-white mt-2 font-heading tracking-tighter">₦85.2M</h3>
+                  <h3 className="text-3xl font-bold text-white mt-2 font-heading tracking-tighter">Member Portfolio</h3>
                 </div>
                 <div className="bg-primary/20 text-primary p-4 rounded-full">
                   <div className="w-6 h-6">🛡️</div>
@@ -79,18 +79,10 @@ const Home = () => {
                       <p className="text-xs text-noble-gray uppercase tracking-wider">Volume</p>
                     </div>
                   </div>
-                  <span className="text-secondary font-bold text-xl">450</span>
+                  <span className="text-secondary font-bold text-sm">Tracked</span>
                 </div>
               </div>
-              <div className="mt-8 pt-6 border-t border-white/10 flex justify-between items-center">
-                <div className="flex -space-x-2">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="w-10 h-10 rounded-full border-2 border-background bg-slate-700 place-items-center grid text-xs text-white/50">{i}</div>
-                  ))}
-                  <div className="w-10 h-10 rounded-full border-2 border-background bg-primary text-primary-foreground font-bold grid place-items-center">+500</div>
-                </div>
-                <span className="text-noble-gray text-sm font-medium">Verified Partners</span>
-              </div>
+
             </div>
             {/* Decorative blobs behind card */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-noble-green/10 blur-3xl -z-10 rounded-full"></div>
