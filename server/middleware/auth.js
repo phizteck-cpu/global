@@ -25,11 +25,14 @@ export const requireRole = (roles) => (req, res, next) => {
     next();
 };
 
+// Expanded roles to include all staff types
+export const ALL_STAFF_ROLES = ['SUPERADMIN', 'ADMIN', 'ACCOUNTANT', 'FINANCE_ADMIN', 'OPS_ADMIN', 'SUPPORT_ADMIN'];
+
 export const isSuperAdmin = requireRole(['SUPERADMIN']);
 export const isAdmin = requireRole(['SUPERADMIN', 'ADMIN']);
-export const isAccountant = requireRole(['SUPERADMIN', 'ACCOUNTANT']);
-export const anyAdmin = requireRole(['SUPERADMIN', 'ADMIN', 'ACCOUNTANT']);
+export const isAccountant = requireRole(['SUPERADMIN', 'ACCOUNTANT', 'FINANCE_ADMIN']);
+export const anyAdmin = requireRole(ALL_STAFF_ROLES);
 
 // Legacy helper compatibility
-export const isOps = isAdmin;
+export const isOps = requireRole(['SUPERADMIN', 'ADMIN', 'OPS_ADMIN']);
 export const isFinance = isAccountant;

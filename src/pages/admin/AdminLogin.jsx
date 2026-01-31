@@ -9,27 +9,35 @@ const AdminLogin = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
-    const { login } = useAuth();
+    const { login, logout } = useAuth();
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
         setLoading(true);
 
-        const result = await login(username, password);
+        try {
+            const result = await login(username, password);
 
-        if (result.success) {
-            const adminRoles = ['ADMIN', 'SUPERADMIN', 'FINANCE_ADMIN', 'OPS_ADMIN', 'SUPPORT_ADMIN'];
-            if (adminRoles.includes(result.role)) {
-                navigate('/admin');
+            if (result.success) {
+                const adminRoles = ['ADMIN', 'SUPERADMIN', 'FINANCE_ADMIN', 'OPS_ADMIN', 'SUPPORT_ADMIN', 'ACCOUNTANT'];
+                if (adminRoles.includes(result.role)) {
+                    navigate('/admin');
+                } else {
+                    // Security: If they successfully authenticated but are NOT an admin, 
+                    // we log them out and show generic failure message.
+                    await logout();
+                    setError('Login failed');
+                }
             } else {
-                setError('Access Denied: This portal is for administrative staff only.');
-                // Optionally logout? For now just show error.
+                // As requested, always show generic "Login failed" message
+                setError('Login failed');
             }
-        } else {
-            setError(result.message);
+        } catch (err) {
+            setError('Login failed');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     return (
