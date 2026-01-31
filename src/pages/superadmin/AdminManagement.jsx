@@ -7,10 +7,15 @@ import {
     UserPlus,
     Terminal,
     Lock,
-    UserSecurity,
     Info,
     RefreshCcw,
-    Activity
+    Activity,
+    Building2,
+    CreditCard,
+    User,
+    Save,
+    CheckCircle2,
+    AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -19,6 +24,17 @@ const AdminManagement = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // Company Bank Settings State
+    const [bankSettings, setBankSettings] = useState({
+        bankName: '',
+        accountNumber: '',
+        accountName: ''
+    });
+    const [bankLoading, setBankLoading] = useState(true);
+    const [bankSaving, setBankSaving] = useState(false);
+    const [bankSuccess, setBankSuccess] = useState('');
+    const [bankError, setBankError] = useState('');
 
     const fetchAdmins = async () => {
         setIsRefreshing(true);
@@ -34,8 +50,40 @@ const AdminManagement = () => {
         }
     };
 
+    const fetchBankSettings = async () => {
+        try {
+            const res = await api.get('/admin/company-settings');
+            setBankSettings(res.data);
+        } catch (err) {
+            setBankError('Failed to load company bank settings.');
+        } finally {
+            setBankLoading(false);
+        }
+    };
+
+    const handleBankSettingChange = (field, value) => {
+        setBankSettings(prev => ({ ...prev, [field]: value }));
+        setBankSuccess('');
+        setBankError('');
+    };
+
+    const saveBankSettings = async () => {
+        setBankSaving(true);
+        setBankError('');
+        setBankSuccess('');
+        try {
+            await api.put('/admin/company-settings', bankSettings);
+            setBankSuccess('Company bank settings updated successfully!');
+        } catch (err) {
+            setBankError('Failed to save bank settings. Please try again.');
+        } finally {
+            setBankSaving(false);
+        }
+    };
+
     useEffect(() => {
         fetchAdmins();
+        fetchBankSettings();
     }, []);
 
     if (loading) {
@@ -81,6 +129,111 @@ const AdminManagement = () => {
                 </div>
             )}
 
+            {/* Company Bank Settings Section */}
+            <div className="bg-gradient-to-br from-emerald-900/20 to-black p-10 rounded-[3rem] border border-emerald-500/10 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-[80px] -z-0 translate-x-1/3 -translate-y-1/3"></div>
+
+                <div className="relative z-10">
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-500">
+                            <Building2 size={28} />
+                        </div>
+                        <div>
+                            <h3 className="text-2xl font-black font-heading text-white tracking-tight">Company Bank Settings</h3>
+                            <p className="text-sm text-noble-gray">Configure the company's bank account for receiving payments</p>
+                        </div>
+                    </div>
+
+                    {bankLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                            <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
+                            {bankSuccess && (
+                                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl flex items-center gap-3 animate-fade-in">
+                                    <CheckCircle2 size={18} />
+                                    {bankSuccess}
+                                </div>
+                            )}
+                            {bankError && (
+                                <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl flex items-center gap-3 animate-fade-in">
+                                    <AlertCircle size={18} />
+                                    {bankError}
+                                </div>
+                            )}
+
+                            <div className="grid md:grid-cols-3 gap-6">
+                                {/* Bank Name */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-widest text-noble-gray ml-1 flex items-center gap-2">
+                                        <Building2 size={14} />
+                                        Bank Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={bankSettings.bankName}
+                                        onChange={(e) => handleBankSettingChange('bankName', e.target.value)}
+                                        placeholder="e.g. First Bank"
+                                        className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all text-white placeholder-white/20"
+                                    />
+                                </div>
+
+                                {/* Account Number */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-widest text-noble-gray ml-1 flex items-center gap-2">
+                                        <CreditCard size={14} />
+                                        Account Number
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={bankSettings.accountNumber}
+                                        onChange={(e) => handleBankSettingChange('accountNumber', e.target.value)}
+                                        placeholder="e.g. 1234567890"
+                                        className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all text-white placeholder-white/20"
+                                    />
+                                </div>
+
+                                {/* Account Name */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold uppercase tracking-widest text-noble-gray ml-1 flex items-center gap-2">
+                                        <User size={14} />
+                                        Account Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={bankSettings.accountName}
+                                        onChange={(e) => handleBankSettingChange('accountName', e.target.value)}
+                                        placeholder="e.g. ValueHills Ltd"
+                                        className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/5 transition-all text-white placeholder-white/20"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end pt-4">
+                                <button
+                                    onClick={saveBankSettings}
+                                    disabled={bankSaving}
+                                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-tighter text-sm transition-all shadow-xl shadow-emerald-500/10 active:scale-95 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {bankSaving ? (
+                                        <>
+                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save size={18} />
+                                            Save Bank Settings
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
             {/* Admin Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                 <AnimatePresence>
@@ -117,10 +270,10 @@ const AdminManagement = () => {
 
                             <div className="mt-10 pt-6 border-t border-white/5 flex items-center justify-between relative z-10">
                                 <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${admin.role === 'SUPERADMIN'
-                                        ? 'bg-red-500/10 text-red-500 border-red-500/20'
-                                        : admin.role === 'FINANCE_ADMIN'
-                                            ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                                            : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                    ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                                    : admin.role === 'FINANCE_ADMIN'
+                                        ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                                        : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                                     }`}>
                                     {admin.role.replace('_', ' ')}
                                 </span>
@@ -176,3 +329,4 @@ const PolicyItem = ({ icon, title, desc }) => (
 );
 
 export default AdminManagement;
+

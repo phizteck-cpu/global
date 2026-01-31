@@ -247,4 +247,65 @@ router.get('/staff', authenticateToken, isSuperAdmin, async (req, res) => {
     }
 });
 
+// Super Admin Control: Get Company Bank Settings
+router.get('/company-settings', authenticateToken, isSuperAdmin, async (req, res) => {
+    try {
+        const settings = await prisma.systemConfig.findMany({
+            where: {
+                key: { in: ['company_bank_name', 'company_account_number', 'company_account_name'] }
+            }
+        });
+
+        const settingsMap = {};
+        settings.forEach(s => {
+            settingsMap[s.key] = s.value;
+        });
+
+        res.json({
+            bankName: settingsMap.company_bank_name || '',
+            accountNumber: settingsMap.company_account_number || '',
+            accountName: settingsMap.company_account_name || ''
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch company settings' });
+    }
+});
+
+// Super Admin Control: Update Company Bank Settings
+router.put('/company-settings', authenticateToken, isSuperAdmin, async (req, res) => {
+    try {
+        const { bankName, accountNumber, accountName } = req.body;
+
+        // Upsert each setting
+        const updates = [
+            { key: 'company_bank_name', value: bankName || '' },
+            { key: 'company_account_number', value: accountNumber || '' },
+            { key: 'company_account_name', value: accountName || '' }
+        ];
+
+        for (const update of updates) {
+            await prisma.systemConfig.upsert({
+                where: { key: update.key },
+                update: { value: update.value },
+                create: { key: update.key, value: update.value }
+            });
+        }
+
+        // Audit log
+        await prisma.auditLog.create({
+            data: {
+                adminId: req.user.id,
+                action: 'UPDATE_COMPANY_BANK_SETTINGS',
+                details: `Updated company bank: ${bankName}, Account: ${accountNumber}, Name: ${accountName}`
+            }
+        });
+
+        res.json({ message: 'Company bank settings updated successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to update company settings' });
+    }
+});
+
 export default router;
