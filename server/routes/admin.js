@@ -152,6 +152,81 @@ router.patch('/users/:id/role', authenticateToken, isSuperAdmin, async (req, res
     }
 });
 
+// Super Admin Control: Adjust User Balance
+router.patch('/users/:id/balance', authenticateToken, isSuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { walletBalance, contributionBalance, bvBalance, reason } = req.body;
+
+        const user = await prisma.user.findUnique({ where: { id: parseInt(id) } });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const updatedUser = await prisma.user.update({
+            where: { id: parseInt(id) },
+            data: {
+                ...(walletBalance !== undefined && { walletBalance: parseFloat(walletBalance) }),
+                ...(contributionBalance !== undefined && { contributionBalance: parseFloat(contributionBalance) }),
+                ...(bvBalance !== undefined && { bvBalance: parseFloat(bvBalance) }),
+            }
+        });
+
+        // Create transaction logs for the adjustments
+        if (walletBalance !== undefined) {
+            await prisma.transaction.create({
+                data: {
+                    userId: user.id,
+                    amount: Math.abs(parseFloat(walletBalance) - user.walletBalance),
+                    ledgerType: 'VIRTUAL',
+                    type: 'ADJUSTMENT',
+                    direction: parseFloat(walletBalance) > user.walletBalance ? 'IN' : 'OUT',
+                    status: 'SUCCESS',
+                    description: `Admin balance adjustment: ${reason || 'System update'}`
+                }
+            });
+        }
+
+        await prisma.auditLog.create({
+            data: {
+                adminId: req.user.id,
+                action: 'BALANCE_ADJUSTMENT',
+                details: `Adjusted user ${id} balances. Wallet: ${walletBalance}, Contribution: ${contributionBalance}, BV: ${bvBalance}. Reason: ${reason}`,
+                targetUserId: parseInt(id)
+            }
+        });
+
+        res.json(updatedUser);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to adjust balance' });
+    }
+});
+
+// Super Admin Control: Manually Update User Tier
+router.patch('/users/:id/tier', authenticateToken, isSuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { tierId } = req.body;
+
+        const updatedUser = await prisma.user.update({
+            where: { id: parseInt(id) },
+            data: { tierId: parseInt(tierId) }
+        });
+
+        await prisma.auditLog.create({
+            data: {
+                adminId: req.user.id,
+                action: 'MANUAL_TIER_UPDATE',
+                details: `Manually changed user ${id} tier to ID: ${tierId}`,
+                targetUserId: parseInt(id)
+            }
+        });
+
+        res.json(updatedUser);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update tier' });
+    }
+});
+
 import jwt from 'jsonwebtoken';
 
 // Super Admin Control: Impersonate Member

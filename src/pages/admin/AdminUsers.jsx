@@ -34,11 +34,30 @@ const AdminUsers = () => {
     const [profileData, setProfileData] = useState(null);
     const [showProfile, setShowProfile] = useState(false);
     const [showActions, setShowActions] = useState(false);
+    const [showAdjustBalance, setShowAdjustBalance] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
+    const [tiers, setTiers] = useState([]);
+    const [adjustForm, setAdjustForm] = useState({
+        walletBalance: '',
+        contributionBalance: '',
+        bvBalance: '',
+        reason: ''
+    });
+    const [selectedTierId, setSelectedTierId] = useState('');
 
     useEffect(() => {
         fetchUsers();
+        fetchTiers();
     }, []);
+
+    const fetchTiers = async () => {
+        try {
+            const res = await api.get('/packages'); // Assuming packages route returns tiers
+            setTiers(res.data);
+        } catch (error) {
+            console.error('Failed to fetch tiers');
+        }
+    };
 
     const fetchUsers = async () => {
         try {
@@ -88,6 +107,43 @@ const AdminUsers = () => {
             console.error(res.message);
         }
         setActionLoading(false);
+    };
+
+    const handleBalanceAdjustment = async (e) => {
+        e.preventDefault();
+        setActionLoading(true);
+        try {
+            const data = {};
+            if (adjustForm.walletBalance !== '') data.walletBalance = adjustForm.walletBalance;
+            if (adjustForm.contributionBalance !== '') data.contributionBalance = adjustForm.contributionBalance;
+            if (adjustForm.bvBalance !== '') data.bvBalance = adjustForm.bvBalance;
+            data.reason = adjustForm.reason;
+
+            await api.patch(`/admin/users/${selectedUser.id}/balance`, data);
+            setShowAdjustBalance(false);
+            setAdjustForm({ walletBalance: '', contributionBalance: '', bvBalance: '', reason: '' });
+            fetchUsers();
+            if (showProfile) handleViewProfile(selectedUser);
+        } catch (error) {
+            alert('Balance adjustment failed');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleManualTierUpdate = async () => {
+        if (!selectedTierId) return;
+        setActionLoading(true);
+        try {
+            await api.patch(`/admin/users/${selectedUser.id}/tier`, { tierId: selectedTierId });
+            fetchUsers();
+            if (showProfile) handleViewProfile(selectedUser);
+            alert('Tier updated successfully');
+        } catch (error) {
+            alert('Tier update failed');
+        } finally {
+            setActionLoading(false);
+        }
     };
 
     const filteredUsers = users.filter(u =>
@@ -376,18 +432,132 @@ const AdminUsers = () => {
                                     loading={actionLoading}
                                 />
                                 {currentUser?.role === 'SUPERADMIN' && (
-                                    <ActionButton
-                                        label="Shadow Mode (Impersonate)"
-                                        icon={<Activity size={20} />}
-                                        color="bg-primary/10 text-primary"
-                                        onClick={handleImpersonateIdEnity}
-                                        loading={actionLoading}
-                                    />
+                                    <>
+                                        <ActionButton
+                                            label="Shadow Mode (Impersonate)"
+                                            icon={<Activity size={20} />}
+                                            color="bg-primary/10 text-primary"
+                                            onClick={handleImpersonateIdEnity}
+                                            loading={actionLoading}
+                                        />
+                                        <ActionButton
+                                            label="Adjust Fiscal Balances"
+                                            icon={<Wallet size={20} />}
+                                            color="bg-amber-500/10 text-amber-500"
+                                            onClick={() => { setShowAdjustBalance(true); setShowActions(false); }}
+                                            loading={actionLoading}
+                                        />
+                                        <div className="pt-4 space-y-2">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-noble-gray mb-2">Institutional Tier Override</p>
+                                            <div className="flex gap-2">
+                                                <select
+                                                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-primary/50"
+                                                    value={selectedTierId}
+                                                    onChange={(e) => setSelectedTierId(e.target.value)}
+                                                >
+                                                    <option value="" className="bg-slate-900">Select Target Tier</option>
+                                                    {tiers.map(t => (
+                                                        <option key={t.id} value={t.id} className="bg-slate-900">{t.name}</option>
+                                                    ))}
+                                                </select>
+                                                <button
+                                                    onClick={handleManualTierUpdate}
+                                                    disabled={actionLoading || !selectedTierId}
+                                                    className="px-4 py-3 bg-white text-black rounded-xl font-bold text-[10px] uppercase transition-all active:scale-95 disabled:opacity-50"
+                                                >
+                                                    Sync
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </>
                                 )}
                                 <button className="w-full p-4 text-[10px] font-black uppercase tracking-widest text-noble-gray hover:text-white transition-all underline underline-offset-4" onClick={() => setShowActions(false)}>
                                     Release Terminal
                                 </button>
                             </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Balance Adjustment Modal */}
+            <AnimatePresence>
+                {showAdjustBalance && selectedUser && (
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setShowAdjustBalance(false)} />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-lg bg-slate-900 border border-white/10 rounded-[3.5rem] p-12 shadow-2xl"
+                        >
+                            <h3 className="text-3xl font-black text-white font-heading tracking-tighter mb-2">Fiscal Adjustment</h3>
+                            <p className="text-noble-gray text-sm mb-8">Direct ledger modification for <span className="text-primary font-bold">{selectedUser.firstName}</span>. Use with extreme caution.</p>
+
+                            <form onSubmit={handleBalanceAdjustment} className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-noble-gray ml-1">Wallet (₦)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-amber-500/50"
+                                            placeholder={selectedUser.walletBalance}
+                                            value={adjustForm.walletBalance}
+                                            onChange={(e) => setAdjustForm({ ...adjustForm, walletBalance: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-noble-gray ml-1">Cooperative (₦)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-primary/50"
+                                            placeholder={selectedUser.contributionBalance}
+                                            value={adjustForm.contributionBalance}
+                                            onChange={(e) => setAdjustForm({ ...adjustForm, contributionBalance: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-noble-gray ml-1">Business Volume (BV)</label>
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-blue-500/50"
+                                        placeholder={selectedUser.bvBalance}
+                                        value={adjustForm.bvBalance}
+                                        onChange={(e) => setAdjustForm({ ...adjustForm, bvBalance: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-noble-gray ml-1">Adjustment Rationale</label>
+                                    <textarea
+                                        required
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-white/20 h-24 resize-none"
+                                        placeholder="Explain the reason for this manual override..."
+                                        value={adjustForm.reason}
+                                        onChange={(e) => setAdjustForm({ ...adjustForm, reason: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="flex gap-4 pt-4">
+                                    <button
+                                        type="button"
+                                        className="flex-1 p-5 rounded-2xl border border-white/10 text-noble-gray font-black uppercase tracking-widest text-[10px] hover:bg-white/5 transition-all"
+                                        onClick={() => setShowAdjustBalance(false)}
+                                    >
+                                        Abort
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={actionLoading}
+                                        className="flex-2 bg-white text-black p-5 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-amber-500 hover:text-white transition-all active:scale-[0.98] disabled:opacity-50 px-10"
+                                    >
+                                        Commit Adjustment
+                                    </button>
+                                </div>
+                            </form>
                         </motion.div>
                     </div>
                 )}
