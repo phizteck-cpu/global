@@ -21,6 +21,9 @@
         "jsonwebtoken": "^9.0.2",
         "node-cron": "^4.2.1"
     },
+    "prisma": {
+        "seed": "node prisma/seed.js"
+    },
     "devDependencies": {
         "cross-env": "^10.1.0",
         "jest": "^30.2.0",
