@@ -1,11 +1,10 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma/client.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { initializeTransaction } from '../services/paymentService.js';
 import crypto from 'crypto';
 
-const prisma = new PrismaClient();
 const router = express.Router();
 
 // GET /api/wallet - Get Wallet Balances

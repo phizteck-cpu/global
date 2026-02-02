@@ -1,9 +1,8 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma/client.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { processReferralBonus } from '../utils/referralSystem.js';
 
-const prisma = new PrismaClient();
 const router = express.Router();
 
 // Get Contribution History

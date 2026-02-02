@@ -1,9 +1,8 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma/client.js';
 import { authenticateToken, isOps } from '../middleware/auth.js';
 
-const prisma = new PrismaClient();
 const router = express.Router();
 
 // GET /inventory - View Available Food Items

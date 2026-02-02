@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../prisma/client.js';
 
 /**
  * Process the Direct Referral Bonus (Level 1)

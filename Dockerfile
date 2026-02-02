@@ -21,8 +21,13 @@ RUN cd server && npm install --omit=dev
 COPY server/ ./server/
 COPY --from=frontend-builder /app/dist ./dist
 
-# Generate Prisma Client for the right platform
+# Install Prisma CLI globally for migrations
+RUN npm install -g prisma
+
+# Generate Prisma Client for PostgreSQL
 RUN cd server && npx prisma generate
 
 EXPOSE 5000
-CMD ["node", "server/index.js"]
+
+# Run database migration and start server
+CMD ["sh", "-c", "npx prisma migrate deploy && node server/index.js"]

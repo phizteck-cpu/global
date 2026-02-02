@@ -1,9 +1,8 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../prisma/client.js';
 import { authenticateToken } from '../middleware/auth.js';
 
-const prisma = new PrismaClient();
 const router = express.Router();
 
 // GET /users/me - Get Profile
