@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS `User` (
     lastName VARCHAR(191) NOT NULL,
     phone VARCHAR(191) UNIQUE,
     role VARCHAR(191) NOT NULL DEFAULT 'MEMBER', -- MEMBER, ADMIN, SUPERADMIN, ACCOUNTANT
+    KEY idx_user_role (role),
     status VARCHAR(191) NOT NULL DEFAULT 'ACTIVE', -- ACTIVE, SUSPENDED, PENDING_KYC
     transactionPin VARCHAR(191),
     kycDocUrl VARCHAR(191),
@@ -66,7 +67,8 @@ CREATE TABLE IF NOT EXISTS `Contribution` (
     status VARCHAR(191) NOT NULL DEFAULT 'PAID',
     description VARCHAR(191),
     createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (userId) REFERENCES `User`(id) ON DELETE CASCADE
+    FOREIGN KEY (userId) REFERENCES `User`(id) ON DELETE CASCADE,
+    KEY idx_contribution_userId (userId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Transactions Table
@@ -81,7 +83,8 @@ CREATE TABLE IF NOT EXISTS `Transaction` (
     reference VARCHAR(191) UNIQUE,
     description VARCHAR(191),
     createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (userId) REFERENCES `User`(id) ON DELETE CASCADE
+    FOREIGN KEY (userId) REFERENCES `User`(id) ON DELETE CASCADE,
+    KEY idx_transaction_userId (userId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Withdrawals Table
@@ -95,7 +98,9 @@ CREATE TABLE IF NOT EXISTS `Withdrawal` (
     processedAt DATETIME,
     createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (userId) REFERENCES `User`(id) ON DELETE CASCADE,
-    FOREIGN KEY (adminId) REFERENCES `User`(id)
+    FOREIGN KEY (adminId) REFERENCES `User`(id),
+    KEY idx_withdrawal_userId (userId),
+    KEY idx_withdrawal_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- AuditLogs Table
@@ -108,7 +113,9 @@ CREATE TABLE IF NOT EXISTS `AuditLog` (
     ipAddress VARCHAR(191),
     timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (adminId) REFERENCES `User`(id),
-    FOREIGN KEY (targetUserId) REFERENCES `User`(id)
+    FOREIGN KEY (targetUserId) REFERENCES `User`(id),
+    KEY idx_auditlog_adminId (adminId),
+    KEY idx_auditlog_timestamp (timestamp)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- SystemConfig Table
@@ -120,17 +127,8 @@ CREATE TABLE IF NOT EXISTS `SystemConfig` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
--- 3. INDEXES
--- -----------------------------------------------------------------------------
 
-CREATE INDEX idx_user_role ON `User`(role);
-CREATE INDEX idx_contribution_userId ON `Contribution`(userId);
-CREATE INDEX idx_transaction_userId ON `Transaction`(userId);
 
-CREATE INDEX idx_withdrawal_userId ON `Withdrawal`(userId);
-CREATE INDEX idx_withdrawal_status ON `Withdrawal`(status);
-CREATE INDEX idx_auditlog_adminId ON `AuditLog`(adminId);
-CREATE INDEX idx_auditlog_timestamp ON `AuditLog`(timestamp);
 
 -- -----------------------------------------------------------------------------
 -- 4. SEED DATA
