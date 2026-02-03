@@ -1,8 +1,15 @@
 -- Database Schema for ValueHills Platform
--- MySQL Database
+-- Updated: 2026-02-03
+-- Source: server/prisma/schema.prisma
 
--- Create Database (run this first in phpMyAdmin)
+-- -----------------------------------------------------------------------------
+-- 1. CONFIGURATION
+-- -----------------------------------------------------------------------------
 -- CREATE DATABASE valuehills CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
+-- 2. TABLES
+-- -----------------------------------------------------------------------------
 
 -- Users Table
 CREATE TABLE IF NOT EXISTS `User` (
@@ -13,8 +20,8 @@ CREATE TABLE IF NOT EXISTS `User` (
     firstName VARCHAR(191) NOT NULL,
     lastName VARCHAR(191) NOT NULL,
     phone VARCHAR(191) UNIQUE,
-    role VARCHAR(191) NOT NULL DEFAULT 'MEMBER',
-    status VARCHAR(191) NOT NULL DEFAULT 'ACTIVE',
+    role VARCHAR(191) NOT NULL DEFAULT 'MEMBER', -- MEMBER, ADMIN, SUPERADMIN, ACCOUNTANT
+    status VARCHAR(191) NOT NULL DEFAULT 'ACTIVE', -- ACTIVE, SUSPENDED, PENDING_KYC
     transactionPin VARCHAR(191),
     kycDocUrl VARCHAR(191),
     kycStatus VARCHAR(191) NOT NULL DEFAULT 'PENDING',
@@ -65,9 +72,9 @@ CREATE TABLE IF NOT EXISTS `Transaction` (
     id INT AUTO_INCREMENT PRIMARY KEY,
     userId INT NOT NULL,
     amount DOUBLE NOT NULL,
-    ledgerType VARCHAR(191) NOT NULL,
+    ledgerType VARCHAR(191) NOT NULL, -- COOPERATIVE, COMPANY, VIRTUAL
     type VARCHAR(191) NOT NULL,
-    direction VARCHAR(191) NOT NULL,
+    direction VARCHAR(191) NOT NULL, -- IN, OUT
     status VARCHAR(191) NOT NULL DEFAULT 'SUCCESS',
     reference VARCHAR(191) UNIQUE,
     description VARCHAR(191),
@@ -110,7 +117,9 @@ CREATE TABLE IF NOT EXISTS `SystemConfig` (
     updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Create Indexes for Better Performance
+-- -----------------------------------------------------------------------------
+-- 3. INDEXES
+-- -----------------------------------------------------------------------------
 CREATE INDEX idx_user_email ON `User`(email);
 CREATE INDEX idx_user_username ON `User`(username);
 CREATE INDEX idx_user_referralCode ON `User`(referralCode);
@@ -122,6 +131,10 @@ CREATE INDEX idx_withdrawal_userId ON `Withdrawal`(userId);
 CREATE INDEX idx_withdrawal_status ON `Withdrawal`(status);
 CREATE INDEX idx_auditlog_adminId ON `AuditLog`(adminId);
 CREATE INDEX idx_auditlog_timestamp ON `AuditLog`(timestamp);
+
+-- -----------------------------------------------------------------------------
+-- 4. SEED DATA
+-- -----------------------------------------------------------------------------
 
 -- Insert Default Tiers
 INSERT INTO `Tier` (name, weeklyAmount, onboardingFee, maintenanceFee, upgradeFee) VALUES
@@ -137,12 +150,14 @@ INSERT INTO `SystemConfig` (`key`, value) VALUES
 ('company_account_name', '')
 ON DUPLICATE KEY UPDATE `key`=`key`;
 
--- Insert Admin User (Password: MyPassword123 - bcrypt hash)
+-- Insert Admin User (Password: MyPassword123)
+-- Hash: $2a$10$ewvJmGiybJZpB8ooTR57YenEK5uYHHaXggNI/QvBwRuVx/6Ykr64i
 INSERT INTO `User` (email, username, password, firstName, lastName, role, status, kycStatus) VALUES
 ('admin@valuehills.com', 'admin', '$2a$10$ewvJmGiybJZpB8ooTR57YenEK5uYHHaXggNI/QvBwRuVx/6Ykr64i', 'System', 'Administrator', 'SUPERADMIN', 'ACTIVE', 'VERIFIED')
 ON DUPLICATE KEY UPDATE username=username;
 
--- Insert a Sample Member User (Password: user123 - bcrypt hash)
+-- Insert Sample Member (Password: user123)
+-- Hash: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/nMskyB.5NURGHsCWdFMqG
 INSERT INTO `User` (email, username, password, firstName, lastName, role, status, kycStatus, tierId, referralCode) VALUES
 ('member@example.com', 'member', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/nMskyB.5NURGHsCWdFMqG', 'John', 'Doe', 'MEMBER', 'ACTIVE', 'VERIFIED', 1, 'REF-INITIAL-001')
 ON DUPLICATE KEY UPDATE username=username;

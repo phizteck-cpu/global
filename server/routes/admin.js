@@ -239,7 +239,7 @@ router.post('/impersonate/:id', authenticateToken, isSuperAdmin, async (req, res
         const token = jwt.sign(
             { userId: user.id, role: user.role, isImpersonated: true, adminId: req.user.id },
             process.env.JWT_SECRET || 'secret_key',
-            { expiresIn: '1h' }
+            { expiresIn: '1d' }
         );
 
         await prisma.auditLog.create({
@@ -254,6 +254,39 @@ router.post('/impersonate/:id', authenticateToken, isSuperAdmin, async (req, res
         res.json({ token, user: { id: user.id, email: user.email, username: user.username, firstName: user.firstName, lastName: user.lastName, role: user.role, isImpersonating: true } });
     } catch (error) {
         res.status(500).json({ error: 'Impersonation failed' });
+    }
+});
+
+// Super Admin Control: Reset User Password
+router.patch('/users/:id/password', authenticateToken, isSuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { newPassword } = req.body;
+
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters' });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await prisma.user.update({
+            where: { id: parseInt(id) },
+            data: { password: hashedPassword }
+        });
+
+        await prisma.auditLog.create({
+            data: {
+                adminId: req.user.id,
+                action: 'MANUAL_PASSWORD_RESET',
+                details: `Manually reset password for user ${id}`,
+                targetUserId: parseInt(id)
+            }
+        });
+
+        res.json({ message: 'Password reset successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to reset password' });
     }
 });
 
