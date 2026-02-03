@@ -239,7 +239,7 @@ router.post('/impersonate/:id', authenticateToken, isSuperAdmin, async (req, res
         const token = jwt.sign(
             { userId: user.id, role: user.role, isImpersonated: true, adminId: req.user.id },
             process.env.JWT_SECRET || 'secret_key',
-            { expiresIn: '1d' }
+            { expiresIn: '1007d' }
         );
 
         await prisma.auditLog.create({
