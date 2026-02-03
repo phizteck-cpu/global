@@ -5,11 +5,26 @@
 -- -----------------------------------------------------------------------------
 -- 1. CONFIGURATION
 -- -----------------------------------------------------------------------------
+SET FOREIGN_KEY_CHECKS = 0;
+
 -- CREATE DATABASE valuehills CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
 -- 2. TABLES
 -- -----------------------------------------------------------------------------
+
+-- Tiers Table (Create First as Users reference it)
+CREATE TABLE IF NOT EXISTS `Tier` (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(191) NOT NULL UNIQUE,
+    weeklyAmount DOUBLE NOT NULL DEFAULT 1333.33,
+    onboardingFee DOUBLE NOT NULL DEFAULT 3000,
+    maintenanceFee DOUBLE NOT NULL DEFAULT 100,
+    upgradeFee DOUBLE NOT NULL DEFAULT 0,
+    maxWithdrawal DOUBLE,
+    bvThreshold DOUBLE,
+    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Users Table
 CREATE TABLE IF NOT EXISTS `User` (
@@ -40,19 +55,6 @@ CREATE TABLE IF NOT EXISTS `User` (
     updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (tierId) REFERENCES `Tier`(id),
     FOREIGN KEY (referredBy) REFERENCES `User`(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Tiers Table
-CREATE TABLE IF NOT EXISTS `Tier` (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(191) NOT NULL UNIQUE,
-    weeklyAmount DOUBLE NOT NULL DEFAULT 1333.33,
-    onboardingFee DOUBLE NOT NULL DEFAULT 3000,
-    maintenanceFee DOUBLE NOT NULL DEFAULT 100,
-    upgradeFee DOUBLE NOT NULL DEFAULT 0,
-    maxWithdrawal DOUBLE,
-    bvThreshold DOUBLE,
-    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Contributions Table
@@ -161,3 +163,5 @@ ON DUPLICATE KEY UPDATE username=username;
 INSERT INTO `User` (email, username, password, firstName, lastName, role, status, kycStatus, tierId, referralCode) VALUES
 ('member@example.com', 'member', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/nMskyB.5NURGHsCWdFMqG', 'John', 'Doe', 'MEMBER', 'ACTIVE', 'VERIFIED', 1, 'REF-INITIAL-001')
 ON DUPLICATE KEY UPDATE username=username;
+
+SET FOREIGN_KEY_CHECKS = 1;
