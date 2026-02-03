@@ -3,8 +3,10 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../prisma/client.js';
 
+import { validateSignup } from '../middleware/validate.js';
+
 const router = express.Router();
-router.post('/signup', async (req, res) => {
+router.post('/signup', validateSignup, async (req, res) => {
     try {
         const { firstName, lastName, email, username, phone, password, tierId, referralCode } = req.body;
 

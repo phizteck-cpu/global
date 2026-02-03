@@ -290,8 +290,10 @@ router.patch('/users/:id/password', authenticateToken, isSuperAdmin, async (req,
     }
 });
 
+import { validateAdminCreate } from '../middleware/validate.js';
+
 // Super Admin Control: Register Staff
-router.post('/register', authenticateToken, isSuperAdmin, async (req, res) => {
+router.post('/register', authenticateToken, isSuperAdmin, validateAdminCreate, async (req, res) => {
     try {
         const { firstName, lastName, fullName, email, username, password, role } = req.body;
 
