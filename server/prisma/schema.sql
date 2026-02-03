@@ -122,13 +122,11 @@ CREATE TABLE IF NOT EXISTS `SystemConfig` (
 -- -----------------------------------------------------------------------------
 -- 3. INDEXES
 -- -----------------------------------------------------------------------------
-CREATE INDEX idx_user_email ON `User`(email);
-CREATE INDEX idx_user_username ON `User`(username);
-CREATE INDEX idx_user_referralCode ON `User`(referralCode);
+
 CREATE INDEX idx_user_role ON `User`(role);
 CREATE INDEX idx_contribution_userId ON `Contribution`(userId);
 CREATE INDEX idx_transaction_userId ON `Transaction`(userId);
-CREATE INDEX idx_transaction_reference ON `Transaction`(reference);
+
 CREATE INDEX idx_withdrawal_userId ON `Withdrawal`(userId);
 CREATE INDEX idx_withdrawal_status ON `Withdrawal`(status);
 CREATE INDEX idx_auditlog_adminId ON `AuditLog`(adminId);
