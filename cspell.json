@@ -1,6 +1,8 @@
 {
   "version": "0.2",
   "words": [
+    "SUPERADMIN",
+    "auditlog",
     "errorlevel",
     "mysqladmin",
     "prootpassword",
