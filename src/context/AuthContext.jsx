@@ -26,9 +26,13 @@ export const AuthProvider = ({ children }) => {
             setUser(res.data.user);
             return { success: true, role: res.data.user.role };
         } catch (error) {
+            const message =
+                error.response?.data?.message ||
+                error.response?.data?.error ||
+                (error.request ? 'Cannot reach server. Please try again.' : 'Login failed');
             return {
                 success: false,
-                message: error.response?.data?.message || error.response?.data?.error || 'Login failed'
+                message
             };
         }
     };

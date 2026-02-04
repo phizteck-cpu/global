@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+ï»¿import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -54,13 +54,13 @@ const Login = () => {
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-noble-gray ml-1">Username</label>
+            <label className="text-sm font-medium text-noble-gray ml-1">Email or Username</label>
             <div className="group relative">
               <input
                 type="text"
                 required
                 className="w-full px-5 py-4 rounded-xl bg-surface border border-white/10 text-white placeholder-white/30 focus:ring-4 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all"
-                placeholder="your_username"
+                placeholder="name@example.com or username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
@@ -73,7 +73,7 @@ const Login = () => {
                 type="password"
                 required
                 className="w-full px-5 py-4 rounded-xl bg-surface border border-white/10 text-white placeholder-white/30 focus:ring-4 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all"
-                placeholder="••••••••"
+                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -99,3 +99,4 @@ const Login = () => {
 };
 
 export default Login;
+

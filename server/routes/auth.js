@@ -102,9 +102,20 @@ router.post('/signup', validateSignup, async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
+        const identifier = (username || '').trim();
 
-        const user = await prisma.user.findUnique({
-            where: { username },
+        if (!identifier || !password) {
+            return res.status(400).json({ message: 'Username and password are required' });
+        }
+
+        const user = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { username: identifier },
+                    { email: identifier },
+                    { phone: identifier }
+                ]
+            },
             include: { tier: true }
         });
 

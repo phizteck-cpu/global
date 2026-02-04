@@ -155,9 +155,9 @@ INSERT INTO `User` (email, username, password, firstName, lastName, role, status
 ON DUPLICATE KEY UPDATE username=username;
 
 -- Insert Sample Member (Password: user123)
--- Hash: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/nMskyB.5NURGHsCWdFMqG
+-- Hash: $2a$10$0VjXwt4QqzdGozGra2LlyuVk1Isra35kNYeQLu28NUTacVUThaSf2
 INSERT INTO `User` (email, username, password, firstName, lastName, role, status, kycStatus, tierId, referralCode) VALUES
-('member@example.com', 'member', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZRGdjGj/nMskyB.5NURGHsCWdFMqG', 'John', 'Doe', 'MEMBER', 'ACTIVE', 'VERIFIED', 1, 'REF-INITIAL-001')
+('member@example.com', 'member', '$2a$10$0VjXwt4QqzdGozGra2LlyuVk1Isra35kNYeQLu28NUTacVUThaSf2', 'John', 'Doe', 'MEMBER', 'ACTIVE', 'VERIFIED', 1, 'REF-INITIAL-001')
 ON DUPLICATE KEY UPDATE username=username;
 
 SET FOREIGN_KEY_CHECKS = 1;
