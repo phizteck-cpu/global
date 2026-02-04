@@ -1,6 +1,7 @@
 node_modules
 .env
 .env.test
+.env.production
 dist
 dev.db
 dev.db-journal

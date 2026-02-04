@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const API_URL = 'http://localhost:5001/api/auth/login';
+const API_URL = 'http://localhost:5000/api/auth/login';
 
 const testLogin = async () => {
     try {
