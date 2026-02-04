@@ -66,7 +66,7 @@ const Redeem = () => {
     return (
         <div className="space-y-12 animate-fade-in pb-20">
             {/* Header */}
-            <div className="relative p-10 bg-gradient-to-br from-emerald-900/40 to-slate-900 rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
+            <div className="relative p-10 bg-gradient-to-br from-surfaceHighlight/60 to-background rounded-[3rem] border border-white/5 overflow-hidden shadow-2xl">
                 <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 rounded-full blur-[100px] -z-0 translate-x-1/3 -translate-y-1/3" />
                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                     <div>
@@ -131,7 +131,7 @@ const Redeem = () => {
                                 </div>
                                 <button
                                     onClick={() => setSelectedItem(item)}
-                                    className="w-full py-4 bg-white/5 hover:bg-white text-white hover:text-black rounded-2xl transition-all font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 group-btn"
+                                    className="w-full py-4 bg-primary/10 hover:bg-primary text-primary hover:text-background rounded-2xl transition-all font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 group-btn"
                                 >
                                     Fulfill Request <ChevronRight size={14} />
                                 </button>
@@ -204,7 +204,7 @@ const Redeem = () => {
                             initial={{ scale: 0.9, y: 20 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.9, y: 20 }}
-                            className="bg-slate-900 p-10 rounded-[3rem] border border-white/10 max-w-lg w-full relative shadow-[0_0_100px_rgba(0,0,0,0.5)]"
+                            className="bg-surface p-10 rounded-[3rem] border border-white/10 max-w-lg w-full relative shadow-[0_0_100px_rgba(0,0,0,0.5)]"
                         >
                             <button onClick={() => setSelectedItem(null)} className="absolute top-8 right-8 text-noble-gray hover:text-white transition-colors">
                                 <ChevronRight size={32} className="rotate-45" />
@@ -242,7 +242,7 @@ const Redeem = () => {
                                         placeholder="••••••"
                                     />
                                 </div>
-                                <button type="submit" className="w-full py-5 bg-primary text-black font-black uppercase tracking-tighter text-lg rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/20">
+                                <button type="submit" className="w-full py-5 bg-primary text-background font-black uppercase tracking-tighter text-lg rounded-[2rem] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/20">
                                     Finalize Redemption
                                 </button>
                                 <p className="text-[10px] text-center text-noble-gray italic leading-relaxed">

@@ -203,7 +203,7 @@ const AdminUsers = () => {
             </div>
 
             {/* Members Table */}
-            <div className="glass-card rounded-[3rem] overflow-hidden border-white/5 shadow-premium mt-8 bg-slate-900/40">
+            <div className="glass-card rounded-[3rem] overflow-hidden border-white/5 shadow-premium mt-8 bg-surface/60">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead className="bg-white/5 border-b border-white/5">
@@ -311,13 +311,13 @@ const AdminUsers = () => {
                             initial={{ scale: 0.9, y: 40, opacity: 0 }}
                             animate={{ scale: 1, y: 0, opacity: 1 }}
                             exit={{ scale: 0.9, y: 40, opacity: 0 }}
-                            className="relative w-full max-w-5xl bg-slate-900 border border-white/10 rounded-[3.5rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col max-h-[90vh]"
+                            className="relative w-full max-w-5xl bg-surface border border-white/10 rounded-[3.5rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col max-h-[90vh]"
                         >
                             {/* Modal Header */}
                             <div className="p-10 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-white/[0.02] to-transparent">
                                 <div className="flex items-center gap-8">
                                     <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary to-emerald-600 p-1">
-                                        <div className="w-full h-full rounded-[1.2rem] bg-slate-900 flex items-center justify-center text-4xl font-black text-white">
+                                        <div className="w-full h-full rounded-[1.2rem] bg-surface flex items-center justify-center text-4xl font-black text-white">
                                             {profileData.firstName?.[0]}
                                         </div>
                                     </div>
@@ -411,7 +411,7 @@ const AdminUsers = () => {
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
-                            className="relative w-full max-w-md bg-slate-900 border border-white/10 rounded-[3rem] p-10 shadow-2xl"
+                            className="relative w-full max-w-md bg-surface border border-white/10 rounded-[3rem] p-10 shadow-2xl"
                         >
                             <h3 className="text-3xl font-black text-white font-heading tracking-tighter mb-2">Ops Terminal</h3>
                             <p className="text-noble-gray text-sm mb-10">Executing commands for: <span className="text-primary font-bold">{selectedUser.firstName} {selectedUser.lastName}</span></p>
@@ -455,9 +455,9 @@ const AdminUsers = () => {
                                                     value={selectedTierId}
                                                     onChange={(e) => setSelectedTierId(e.target.value)}
                                                 >
-                                                    <option value="" className="bg-slate-900">Select Target Tier</option>
+                                                    <option value="" className="bg-surface">Select Target Tier</option>
                                                     {tiers.map(t => (
-                                                        <option key={t.id} value={t.id} className="bg-slate-900">{t.name}</option>
+                                                        <option key={t.id} value={t.id} className="bg-surface">{t.name}</option>
                                                     ))}
                                                 </select>
                                                 <button
@@ -489,7 +489,7 @@ const AdminUsers = () => {
                             initial={{ scale: 0.95, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                            className="relative w-full max-w-lg bg-slate-900 border border-white/10 rounded-[3.5rem] p-12 shadow-2xl"
+                            className="relative w-full max-w-lg bg-surface border border-white/10 rounded-[3.5rem] p-12 shadow-2xl"
                         >
                             <h3 className="text-3xl font-black text-white font-heading tracking-tighter mb-2">Fiscal Adjustment</h3>
                             <p className="text-noble-gray text-sm mb-8">Direct ledger modification for <span className="text-primary font-bold">{selectedUser.firstName}</span>. Use with extreme caution.</p>

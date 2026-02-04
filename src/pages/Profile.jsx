@@ -132,11 +132,11 @@ const Profile = () => {
     return (
         <div className="space-y-10 animate-fade-in pb-20 max-w-7xl mx-auto">
             {/* Header Terminal */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 bg-gradient-to-br from-slate-900 to-black p-10 rounded-[3rem] border border-white/5 shadow-2xl relative overflow-hidden">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 bg-gradient-to-br from-surface to-background p-10 rounded-[3rem] border border-white/5 shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full blur-[100px] -z-0 translate-x-1/2 -translate-y-1/2"></div>
                 <div className="relative z-10 flex items-center gap-8">
                     <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary to-emerald-600 p-1">
-                        <div className="w-full h-full rounded-[1.2rem] bg-slate-900 flex items-center justify-center text-4xl font-black text-white">
+                        <div className="w-full h-full rounded-[1.2rem] bg-surface flex items-center justify-center text-4xl font-black text-white">
                             {initials}
                         </div>
                     </div>
@@ -211,7 +211,7 @@ const Profile = () => {
                                         placeholder="https://ipfs.io/ipfs/..."
                                     />
                                 </div>
-                                <button className="w-full py-5 bg-white text-black font-black uppercase tracking-tighter rounded-2xl shadow-xl hover:bg-primary hover:text-white transition-all active:scale-[0.98]">
+                                <button className="w-full py-5 bg-primary text-background font-black uppercase tracking-tighter rounded-2xl shadow-xl hover:shadow-glow transition-all active:scale-[0.98]">
                                     Initialize Security Audit
                                 </button>
                             </form>
@@ -306,7 +306,7 @@ const Profile = () => {
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="relative w-full max-w-lg bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
+                            className="relative w-full max-w-lg bg-surface border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
                         >
                             <div className="flex items-center justify-between mb-8">
                                 <h3 className="text-2xl font-black font-heading text-white tracking-tighter">Security Protocols</h3>
@@ -318,13 +318,13 @@ const Profile = () => {
                             <div className="flex gap-4 mb-8">
                                 <button
                                     onClick={() => { setSecurityTab('PASSWORD'); setSecurityMsg({ text: '', type: '' }); }}
-                                    className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${securityTab === 'PASSWORD' ? 'bg-primary text-black' : 'bg-white/5 text-noble-gray'}`}
+                                    className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${securityTab === 'PASSWORD' ? 'bg-primary text-background' : 'bg-white/5 text-noble-gray'}`}
                                 >
                                     Access Key
                                 </button>
                                 <button
                                     onClick={() => { setSecurityTab('PIN'); setSecurityMsg({ text: '', type: '' }); }}
-                                    className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${securityTab === 'PIN' ? 'bg-secondary text-black' : 'bg-white/5 text-noble-gray'}`}
+                                    className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${securityTab === 'PIN' ? 'bg-secondary text-background' : 'bg-white/5 text-noble-gray'}`}
                                 >
                                     Transaction PIN
                                 </button>
@@ -375,7 +375,7 @@ const Profile = () => {
                                             onChange={e => setPassData({ ...passData, confirmPassword: e.target.value })}
                                         />
                                     </div>
-                                    <button className="w-full py-4 bg-primary text-black font-black uppercase tracking-tighter rounded-xl mt-6 hover:shadow-lg transition-all active:scale-[0.98]">
+                                    <button className="w-full py-4 bg-primary text-background font-black uppercase tracking-tighter rounded-xl mt-6 hover:shadow-glow transition-all active:scale-[0.98]">
                                         Update Access Key
                                     </button>
                                 </form>
@@ -418,7 +418,7 @@ const Profile = () => {
                                             onChange={e => setPinData({ ...pinData, password: e.target.value })}
                                         />
                                     </div>
-                                    <button className="w-full py-4 bg-secondary text-black font-black uppercase tracking-tighter rounded-xl mt-6 hover:shadow-lg transition-all active:scale-[0.98]">
+                                    <button className="w-full py-4 bg-secondary text-background font-black uppercase tracking-tighter rounded-xl mt-6 hover:shadow-glow transition-all active:scale-[0.98]">
                                         Secure Transaction PIN
                                     </button>
                                 </form>
@@ -443,7 +443,7 @@ const Profile = () => {
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="relative w-full max-w-lg bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
+                            className="relative w-full max-w-lg bg-surface border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
                         >
                             <div className="flex items-center justify-between mb-8">
                                 <h3 className="text-2xl font-black font-heading text-white tracking-tighter">Identity Management</h3>
@@ -500,7 +500,7 @@ const Profile = () => {
                                         onChange={e => setEditData({ ...editData, phone: e.target.value })}
                                     />
                                 </div>
-                                <button className="w-full py-4 bg-primary text-black font-black uppercase tracking-tighter rounded-xl mt-6 hover:shadow-lg transition-all active:scale-[0.98]">
+                                <button className="w-full py-4 bg-primary text-background font-black uppercase tracking-tighter rounded-xl mt-6 hover:shadow-glow transition-all active:scale-[0.98]">
                                     Synchronize Identity
                                 </button>
                             </form>

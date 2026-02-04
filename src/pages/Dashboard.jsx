@@ -73,7 +73,7 @@ const Dashboard = () => {
     return (
         <div className="space-y-10 animate-fade-in pb-20">
             {/* Command Header */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 bg-gradient-to-br from-slate-900 to-black p-10 rounded-[3rem] border border-white/5 shadow-2xl relative overflow-hidden">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 bg-gradient-to-br from-surface to-background p-10 rounded-[3rem] border border-white/5 shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full blur-[100px] -z-0 translate-x-1/2 -translate-y-1/2"></div>
                 <div className="relative z-10 space-y-4">
                     <div className="flex items-center gap-3 text-primary">
@@ -180,7 +180,7 @@ const Dashboard = () => {
                     <button
                         onClick={handlePayContribution}
                         disabled={stats.weeksCompleted >= 45 || loading}
-                        className="bg-white text-black hover:bg-primary hover:text-white px-10 py-5 rounded-[2rem] font-black uppercase tracking-tighter text-lg shadow-2xl transition-all active:scale-[0.98] disabled:opacity-30 flex items-center gap-3"
+                        className="bg-primary text-background hover:bg-primary-light px-10 py-5 rounded-[2rem] font-black uppercase tracking-tighter text-lg shadow-2xl transition-all active:scale-[0.98] disabled:opacity-30 flex items-center gap-3"
                     >
                         Execute Contribution <ChevronRight size={20} />
                     </button>

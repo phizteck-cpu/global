@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
+import { Users, Clock, CheckCircle2, Gift, Link as LinkIcon } from 'lucide-react';
 
 const Network = () => {
     const { user } = useAuth();
@@ -37,10 +38,10 @@ const Network = () => {
 
             {/* Referrer Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <StatBox title="Total Members" value={stats?.totalReferrals || 0} icon="👥" />
-                <StatBox title="Pending" value={stats?.pendingReferrals || 0} icon="⏳" color="text-amber-500" />
-                <StatBox title="Active (Paid)" value={stats?.paidReferrals || 0} icon="✅" color="text-primary" />
-                <StatBox title="Total Rewards" value={`₦${(stats?.totalBonusEarned || 0).toLocaleString()}`} icon="🎁" />
+                <StatBox title="Total Members" value={stats?.totalReferrals || 0} icon={Users} />
+                <StatBox title="Pending" value={stats?.pendingReferrals || 0} icon={Clock} color="text-secondary" />
+                <StatBox title="Active (Paid)" value={stats?.paidReferrals || 0} icon={CheckCircle2} color="text-primary" />
+                <StatBox title="Total Rewards" value={`?${(stats?.totalBonusEarned || 0).toLocaleString()}`} icon={Gift} />
             </div>
 
             {/* Referral Table */}
@@ -75,7 +76,7 @@ const Network = () => {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right font-mono font-bold text-primary">
-                                        ₦500.00
+                                        ?500.00
                                     </td>
                                 </tr>
                             ))}
@@ -94,14 +95,17 @@ const Network = () => {
             {/* Referral Link Tool */}
             <div className="bg-gradient-to-br from-primary/20 to-transparent p-8 rounded-3xl border border-primary/20">
                 <h3 className="text-xl font-bold mb-2">Invite Others</h3>
-                <p className="text-noble-gray text-sm mb-6">Earn ₦500 bonus for every friend who completes their first contribution.</p>
+                <p className="text-noble-gray text-sm mb-6">Earn ?500 bonus for every friend who completes their first contribution.</p>
                 <div className="flex gap-4">
-                    <input
-                        type="text"
-                        readOnly
-                        value={referralLink}
-                        className="flex-1 p-3 bg-black/40 rounded-xl border border-white/10 text-primary font-bold font-mono"
-                    />
+                    <div className="flex-1 relative">
+                        <LinkIcon size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" />
+                        <input
+                            type="text"
+                            readOnly
+                            value={referralLink}
+                            className="w-full p-3 pl-10 bg-black/40 rounded-xl border border-white/10 text-primary font-bold font-mono"
+                        />
+                    </div>
                     <button
                         onClick={() => {
                             navigator.clipboard.writeText(referralLink);
@@ -117,10 +121,12 @@ const Network = () => {
     );
 };
 
-const StatBox = ({ title, value, icon, color = 'text-white' }) => (
+const StatBox = ({ title, value, icon: Icon, color = 'text-white' }) => (
     <div className="bg-surfaceHighlight p-6 rounded-2xl border border-white/5">
         <div className="flex items-center gap-3 mb-2">
-            <span className="text-xl">{icon}</span>
+            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+                <Icon size={18} className={color} />
+            </div>
             <span className="text-xs text-noble-gray font-bold uppercase tracking-widest">{title}</span>
         </div>
         <div className={`text-2xl font-bold ${color}`}>{value}</div>

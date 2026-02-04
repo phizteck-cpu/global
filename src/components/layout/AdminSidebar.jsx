@@ -45,12 +45,12 @@ const AdminSidebar = ({ isMobile, isOpen, setIsOpen }) => {
                 animate={isMobile ? (isOpen ? "open" : "closed") : "open"}
                 variants={isMobile ? sidebarVariants : undefined}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className={`fixed left-0 top-0 h-full w-64 bg-slate-900/95 backdrop-blur-xl border-r border-white/5 z-50 flex flex-col ${isMobile ? '' : 'translate-x-0'}`}
+                className={`fixed left-0 top-0 h-full w-64 bg-surface/95 backdrop-blur-xl border-r border-white/5 z-50 flex flex-col ${isMobile ? '' : 'translate-x-0'}`}
             >
                 <div className="p-6 flex items-center justify-center border-b border-white/5">
                     <h1 className="text-2xl font-bold font-heading tracking-tight flex items-center gap-2">
-                        <span className="text-noble-green">Value</span>
-                        <span className="text-noble-gold">Hills</span>
+                        <span className="text-white">Value</span>
+                        <span className="text-primary">Hills</span>
                         <span className="text-[10px] uppercase bg-red-500/20 text-red-500 px-2 py-0.5 rounded tracking-wider border border-red-500/20">Admin</span>
                     </h1>
                 </div>
@@ -64,7 +64,7 @@ const AdminSidebar = ({ isMobile, isOpen, setIsOpen }) => {
                             className={({ isActive }) =>
                                 `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group relative overflow-hidden ${isActive
                                     ? 'bg-gradient-to-r from-red-500/10 to-transparent text-red-500 font-medium border border-red-500/20'
-                                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                    : 'text-noble-gray hover:text-white hover:bg-white/5'
                                 }`
                             }
                         >
@@ -72,7 +72,7 @@ const AdminSidebar = ({ isMobile, isOpen, setIsOpen }) => {
                                 <>
                                     <item.icon
                                         size={20}
-                                        className={`transition-colors ${isActive ? 'text-red-500' : 'text-slate-400 group-hover:text-red-500'}`}
+                                        className={`transition-colors ${isActive ? 'text-red-500' : 'text-noble-gray group-hover:text-red-500'}`}
                                     />
                                     <span>{item.label}</span>
                                     {isActive && (
@@ -88,7 +88,7 @@ const AdminSidebar = ({ isMobile, isOpen, setIsOpen }) => {
                 </nav>
 
                 <div className="p-4 border-t border-white/5">
-                    <button onClick={handleLogout} className="flex items-center gap-3 w-full px-4 py-3 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors">
+                    <button onClick={handleLogout} className="flex items-center gap-3 w-full px-4 py-3 text-noble-gray hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors">
                         <LogOut size={20} />
                         <span>Sign Out</span>
                     </button>

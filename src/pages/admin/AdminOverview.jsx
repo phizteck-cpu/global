@@ -50,7 +50,7 @@ const AdminOverview = () => {
     return (
         <div className="space-y-10 animate-fade-in pb-20">
             {/* Command Header */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 bg-gradient-to-br from-[#0f172a] to-black p-10 rounded-[3rem] border border-white/5 shadow-2xl relative overflow-hidden">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 bg-gradient-to-br from-surface to-background p-10 rounded-[3rem] border border-white/5 shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full blur-[100px] -z-0 translate-x-1/2 -translate-y-1/2"></div>
                 <div className="relative z-10 space-y-2">
                     <div className="flex items-center gap-3 text-primary mb-2">

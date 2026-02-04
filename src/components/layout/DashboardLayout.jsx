@@ -30,7 +30,7 @@ const DashboardLayout = ({ children }) => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-background text-slate-900 flex flex-col">
+        <div className="min-h-screen bg-background text-white flex flex-col">
             {isImpersonating && (
                 <div className="w-full bg-amber-500 text-black px-6 py-2 flex items-center justify-between z-[100] animate-pulse">
                     <div className="flex items-center gap-3">
@@ -41,7 +41,7 @@ const DashboardLayout = ({ children }) => {
                     </div>
                     <button
                         onClick={handleStopImpersonation}
-                        className="flex items-center gap-2 bg-black text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-colors"
+                        className="flex items-center gap-2 bg-surface text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-surfaceHighlight transition-colors"
                     >
                         <LogOut size={12} />
                         Return to Admin

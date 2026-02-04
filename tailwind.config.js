@@ -7,42 +7,42 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        heading: ['Cormorant Garamond', 'serif'],
+        sans: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+        heading: ['Fraunces', 'serif'],
       },
       colors: {
-        background: '#020617', // Slate 950 - Deep Space Blue/Black
-        surface: '#0F172A', // Slate 900
-        surfaceHighlight: '#1E293B', // Slate 800
+        background: '#0A0F1F', // Deep ink
+        surface: '#111827', // Slate 900
+        surfaceHighlight: '#1F2937', // Slate 800
         border: '#1E293B', // Slate 800
 
         primary: {
-          DEFAULT: '#10B981', // Emerald 500 - Brighter for Dark Mode
+          DEFAULT: '#22D3EE', // Cyan 400
           foreground: '#FFFFFF',
-          light: '#34D399',
-          dark: '#059669',
+          light: '#67E8F9',
+          dark: '#0E7490',
         },
         secondary: {
-          DEFAULT: '#F59E0B', // Amber 500 - Bright Gold
+          DEFAULT: '#F97316', // Orange 500
           foreground: '#FFFFFF',
         },
 
         // Brand Specific - "Royal Series"
         noble: {
-          green: '#064E3B', // Emerald 900
-          gold: '#D97706', // Amber 600
+          green: '#0F766E', // Teal 700
+          gold: '#F59E0B', // Amber 500
           gray: '#94A3B8', // Slate 400
         }
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'noble-gradient': 'linear-gradient(135deg, #020617 0%, #064E3B 100%)', // Dark Slate -> Deep Emerald
-        'glass-premium': 'linear-gradient(145deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.6) 100%)',
-        'gold-sheen': 'linear-gradient(45deg, #B45309 0%, #FCD34D 50%, #B45309 100%)',
+        'noble-gradient': 'linear-gradient(135deg, #0A0F1F 0%, #0F766E 100%)',
+        'glass-premium': 'linear-gradient(145deg, rgba(31, 41, 55, 0.7) 0%, rgba(17, 24, 39, 0.6) 100%)',
+        'gold-sheen': 'linear-gradient(45deg, #F97316 0%, #FDBA74 50%, #F97316 100%)',
       },
       boxShadow: {
-        'premium': '0 20px 40px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2)',
-        'glow': '0 0 20px rgba(16, 185, 129, 0.25)',
+        'premium': '0 20px 40px -5px rgba(2, 6, 23, 0.45), 0 8px 10px -6px rgba(2, 6, 23, 0.3)',
+        'glow': '0 0 24px rgba(34, 211, 238, 0.28)',
       }
     },
   },

@@ -129,7 +129,7 @@ const AdminAudit = () => {
                                         </td>
                                         <td className="px-8 py-6">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center font-black text-xs text-white group-hover:border-primary/50 transition-colors">
+                                                <div className="w-10 h-10 rounded-full bg-surfaceHighlight border border-white/10 flex items-center justify-center font-black text-xs text-white group-hover:border-primary/50 transition-colors">
                                                     {log.admin?.fullName?.[0] || 'A'}
                                                 </div>
                                                 <div>

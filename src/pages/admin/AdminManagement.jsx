@@ -211,11 +211,11 @@ const AdminManagement = () => {
                                         value={newAdmin.role}
                                         onChange={e => setNewAdmin({ ...newAdmin, role: e.target.value })}
                                     >
-                                        <option value="ADMIN" className="bg-slate-900">STANDARD ADMIN</option>
-                                        <option value="SUPERADMIN" className="bg-slate-900">SUPER ADMIN</option>
-                                        <option value="FINANCE_ADMIN" className="bg-slate-900">FINANCE OFFICER</option>
-                                        <option value="OPS_ADMIN" className="bg-slate-900">OPERATIONS LEAD</option>
-                                        <option value="SUPPORT_ADMIN" className="bg-slate-900">SUPPORT LEAD</option>
+                                        <option value="ADMIN" className="bg-surface">STANDARD ADMIN</option>
+                                        <option value="SUPERADMIN" className="bg-surface">SUPER ADMIN</option>
+                                        <option value="FINANCE_ADMIN" className="bg-surface">FINANCE OFFICER</option>
+                                        <option value="OPS_ADMIN" className="bg-surface">OPERATIONS LEAD</option>
+                                        <option value="SUPPORT_ADMIN" className="bg-surface">SUPPORT LEAD</option>
                                     </select>
                                 </div>
 

@@ -18,7 +18,7 @@ const AdminLayout = ({ children }) => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-background text-slate-900 flex">
+        <div className="min-h-screen bg-background text-white flex">
             <AdminSidebar
                 isMobile={isMobile}
                 isOpen={isSidebarOpen}

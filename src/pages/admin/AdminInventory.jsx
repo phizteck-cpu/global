@@ -213,7 +213,7 @@ const AdminInventory = () => {
                             initial={{ scale: 0.9, y: 20 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.9, y: 20 }}
-                            className="bg-slate-900 border border-white/10 p-10 rounded-[3rem] max-w-lg w-full shadow-[0_0_100px_rgba(0,0,0,0.5)]"
+                            className="bg-surface border border-white/10 p-10 rounded-[3rem] max-w-lg w-full shadow-[0_0_100px_rgba(0,0,0,0.5)]"
                         >
                             <div className="mb-8">
                                 <h3 className="text-3xl font-black font-heading text-white tracking-tighter">Vault Restock</h3>
