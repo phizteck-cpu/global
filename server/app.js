@@ -21,7 +21,7 @@ import { runDailyContributions } from './services/contributionAutomation.js';
 import { authenticateToken, isAdmin, isSuperAdmin } from './middleware/auth.js';
 
 const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : (process.env.NODE_ENV === 'production' ? '.env.production' : '.env');
-dotenv.config({ path: path.resolve(process.cwd(), envFile) });
+dotenv.config({ path: path.resolve(__dirname, envFile) });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
