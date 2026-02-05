@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 import authRoutes from './routes/auth.js';
@@ -71,6 +72,19 @@ apiRouter.use('/redemptions', redemptionRoutes);
 apiRouter.use('/admin', adminRoutes);
 apiRouter.use('/dashboard', dashboardRoutes);
 
+apiRouter.get('/debug/paths', (req, res) => {
+    const distPath = path.resolve(__dirname, '../dist');
+    const indexPath = path.join(distPath, 'index.html');
+    res.json({
+        __dirname,
+        cwd: process.cwd(),
+        distPath,
+        indexPath,
+        distExists: fs.existsSync(distPath),
+        indexExists: fs.existsSync(indexPath)
+    });
+});
+
 // 1. Primary API Mount
 app.use('/api', apiRouter);
 
@@ -93,6 +107,7 @@ app.use((req, res, next) => {
 
 // 5. Catch-all for SPA (Frontend Routes)
 app.get('*', (req, res) => {
+    console.log(`SPA Request: ${req.method} ${req.url} -> Sending ${indexPath}`);
     // If it's an /api path that wasn't caught, return JSON 404
     if (req.path.startsWith('/api') || req.originalUrl.startsWith('/api')) {
         return res.status(404).json({ error: 'API endpoint not found', path: req.url });
