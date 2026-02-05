@@ -106,19 +106,37 @@ app.use((req, res, next) => {
 });
 
 // 5. Catch-all for SPA (Frontend Routes)
-app.get('*', (req, res) => {
-    console.log(`SPA Request: ${req.method} ${req.url} -> Sending ${indexPath}`);
+app.use((req, res, next) => {
+    console.log(`[SPA DEBUG] ${req.method} ${req.url} - Checking fallback...`);
+    
+    // Check if index.html exists
+    const indexExists = fs.existsSync(indexPath);
+    console.log(`[SPA DEBUG] indexPath: ${indexPath}, exists: ${indexExists}`);
+    
     // If it's an /api path that wasn't caught, return JSON 404
     if (req.path.startsWith('/api') || req.originalUrl.startsWith('/api')) {
+        console.log(`[SPA DEBUG] API path detected, returning 404`);
         return res.status(404).json({ error: 'API endpoint not found', path: req.url });
     }
+    
+    // Check if the request matches a static file that might exist
+    const possibleFilePath = path.join(distPath, req.path);
+    const fileExists = fs.existsSync(possibleFilePath) && fs.statSync(possibleFilePath).isFile();
+    console.log(`[SPA DEBUG] possibleFilePath: ${possibleFilePath}, exists: ${fileExists}`);
+    
     // Otherwise serve the React app
-    res.sendFile(indexPath, (err) => {
-        if (err) {
-            console.error('Error sending index.html:', err);
-            res.status(500).send('Frontend build missing or inaccessible.');
-        }
-    });
+    if (indexExists) {
+        console.log(`[SPA DEBUG] Serving index.html for ${req.url}`);
+        res.sendFile(indexPath, (err) => {
+            if (err) {
+                console.error('[SPA DEBUG] Error sending index.html:', err);
+                res.status(500).send('Frontend build missing or inaccessible.');
+            }
+        });
+    } else {
+        console.error(`[SPA DEBUG] index.html not found at ${indexPath}`);
+        res.status(500).send('Frontend build missing or inaccessible.');
+    }
 });
 
 export default app;
