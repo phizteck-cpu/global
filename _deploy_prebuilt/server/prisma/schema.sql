@@ -1,5 +1,5 @@
 -- Database Schema for ValueHills Platform
--- Updated: 2026-02-05
+-- Updated: 2026-02-03
 -- Source: server/prisma/schema.prisma
 
 -- -----------------------------------------------------------------------------
@@ -41,18 +41,6 @@ CREATE TABLE IF NOT EXISTS `User` (
     transactionPin VARCHAR(191),
     kycDocUrl VARCHAR(191),
     kycStatus VARCHAR(191) NOT NULL DEFAULT 'PENDING',
-    
-    -- Security & Verification Fields
-    emailVerified BOOLEAN NOT NULL DEFAULT FALSE,
-    verificationToken VARCHAR(191),
-    refreshToken VARCHAR(191),
-    resetPasswordToken VARCHAR(191),
-    resetPasswordExpires DATETIME,
-    
-    -- 2FA Support
-    twoFactorEnabled BOOLEAN NOT NULL DEFAULT FALSE,
-    twoFactorSecret VARCHAR(191),
-    
     walletBalance DOUBLE NOT NULL DEFAULT 0.0,
     contributionBalance DOUBLE NOT NULL DEFAULT 0.0,
     bvBalance DOUBLE NOT NULL DEFAULT 0.0,
@@ -139,94 +127,8 @@ CREATE TABLE IF NOT EXISTS `SystemConfig` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
--- BONUS & REFERRAL SYSTEM TABLES
--- -----------------------------------------------------------------------------
 
--- Bonus Table (for referral and BV bonuses)
-CREATE TABLE IF NOT EXISTS `Bonus` (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    userId INT NOT NULL,
-    amount DOUBLE NOT NULL,
-    type VARCHAR(191) NOT NULL, -- REFERRAL, BV_BONUS, MATCHING
-    sourceUserId INT,
-    status VARCHAR(191) NOT NULL DEFAULT 'PENDING', -- PENDING, PROCESSED, CANCELLED
-    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    processedAt DATETIME,
-    FOREIGN KEY (userId) REFERENCES `User`(id) ON DELETE CASCADE,
-    FOREIGN KEY (sourceUserId) REFERENCES `User`(id) ON DELETE SET NULL,
-    KEY idx_bonus_userId (userId),
-    KEY idx_bonus_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Referral Table (for network tracking)
-CREATE TABLE IF NOT EXISTS `Referral` (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    referrerId INT NOT NULL,
-    referredId INT NOT NULL,
-    level INT NOT NULL DEFAULT 1, -- 1, 2, 3 for direct, indirect referral levels
-    status VARCHAR(191) NOT NULL DEFAULT 'PENDING', -- PENDING, ACTIVE, COMPLETED
-    bonusPaid DOUBLE NOT NULL DEFAULT 0.0,
-    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (referrerId) REFERENCES `User`(id) ON DELETE CASCADE,
-    FOREIGN KEY (referredId) REFERENCES `User`(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_referral (referrerId, referredId),
-    KEY idx_referral_referrerId (referrerId),
-    KEY idx_referral_referredId (referredId)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- -----------------------------------------------------------------------------
--- PACKAGE & REDEMPTION SYSTEM TABLES
--- -----------------------------------------------------------------------------
-
--- Package Table (for package management)
-CREATE TABLE IF NOT EXISTS `Package` (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(191) NOT NULL,
-    description VARCHAR(191),
-    price DOUBLE NOT NULL,
-    bvValue DOUBLE NOT NULL DEFAULT 0,
-    durationWeeks INT NOT NULL DEFAULT 0,
-    maxQuantity INT,
-    isActive BOOLEAN NOT NULL DEFAULT TRUE,
-    imageUrl VARCHAR(191),
-    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Redemption Table (for inventory/redemptions)
-CREATE TABLE IF NOT EXISTS `Redemption` (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    userId INT NOT NULL,
-    packageId INT NOT NULL,
-    amount DOUBLE NOT NULL,
-    pointsUsed DOUBLE NOT NULL DEFAULT 0,
-    status VARCHAR(191) NOT NULL DEFAULT 'PENDING', -- PENDING, APPROVED, REJECTED, COMPLETED
-    adminNote VARCHAR(191),
-    processedAt DATETIME,
-    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (userId) REFERENCES `User`(id) ON DELETE CASCADE,
-    FOREIGN KEY (packageId) REFERENCES `Package`(id) ON DELETE CASCADE,
-    KEY idx_redemption_userId (userId),
-    KEY idx_redemption_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- -----------------------------------------------------------------------------
--- NOTIFICATION SYSTEM TABLE
--- -----------------------------------------------------------------------------
-
--- Notification Table (for user alerts)
-CREATE TABLE IF NOT EXISTS `Notification` (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    userId INT NOT NULL,
-    type VARCHAR(191) NOT NULL, -- BONUS, CONTRIBUTION, WITHDRAWAL, SYSTEM
-    title VARCHAR(191) NOT NULL,
-    message VARCHAR(191) NOT NULL,
-    `read` BOOLEAN NOT NULL DEFAULT FALSE,
-    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (userId) REFERENCES `User`(id) ON DELETE CASCADE,
-    KEY idx_notification_userId (userId),
-    KEY idx_notification_read (`read`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------------------------------
 -- 4. SEED DATA

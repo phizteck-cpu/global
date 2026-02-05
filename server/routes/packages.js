@@ -1,100 +1,134 @@
 import express from 'express';
 import prisma from '../prisma/client.js';
-import { authenticateToken, isSuperAdmin, isOps } from '../middleware/auth.js';
+import { authenticateToken, isSuperAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// GET /api/packages - List Available Membership Tiers
+// GET /packages - List all available packages
 router.get('/', async (req, res) => {
+    try {
+        const packages = await prisma.package.findMany({
+            where: { isActive: true },
+            orderBy: { price: 'asc' }
+        });
+        res.json(packages);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch packages' });
+    }
+});
+
+// GET /packages/:id - Get package details
+router.get('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const pkg = await prisma.package.findUnique({
+            where: { id: parseInt(id) }
+        });
+        
+        if (!pkg) {
+            return res.status(404).json({ error: 'Package not found' });
+        }
+        
+        res.json(pkg);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch package details' });
+    }
+});
+
+// POST /packages - Create package (admin)
+router.post('/', authenticateToken, isSuperAdmin, async (req, res) => {
+    try {
+        const { name, description, price, bvValue, durationWeeks, maxQuantity, imageUrl } = req.body;
+        
+        const pkg = await prisma.package.create({
+            data: {
+                name,
+                description: description || null,
+                price: parseFloat(price),
+                bvValue: parseFloat(bvValue) || 0,
+                durationWeeks: parseInt(durationWeeks) || 0,
+                maxQuantity: maxQuantity ? parseInt(maxQuantity) : null,
+                imageUrl: imageUrl || null,
+                isActive: true
+            }
+        });
+        
+        res.status(201).json(pkg);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to create package' });
+    }
+});
+
+// PUT /packages/:id - Update package (admin)
+router.put('/:id', authenticateToken, isSuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, description, price, bvValue, durationWeeks, maxQuantity, imageUrl, isActive } = req.body;
+        
+        const pkg = await prisma.package.update({
+            where: { id: parseInt(id) },
+            data: {
+                name,
+                description: description || null,
+                price: parseFloat(price),
+                bvValue: parseFloat(bvValue) || 0,
+                durationWeeks: parseInt(durationWeeks) || 0,
+                maxQuantity: maxQuantity ? parseInt(maxQuantity) : null,
+                imageUrl: imageUrl || null,
+                isActive: isActive !== undefined ? Boolean(isActive) : true
+            }
+        });
+        
+        res.json(pkg);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to update package' });
+    }
+});
+
+// DELETE /packages/:id - Delete package (admin)
+router.delete('/:id', authenticateToken, isSuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Check if package has any redemptions
+        const redemptionCount = await prisma.redemption.count({
+            where: { packageId: parseInt(id) }
+        });
+        
+        if (redemptionCount > 0) {
+            // Soft delete by deactivating instead
+            await prisma.package.update({
+                where: { id: parseInt(id) },
+                data: { isActive: false }
+            });
+            return res.json({ message: 'Package deactivated (has existing redemptions)' });
+        }
+        
+        await prisma.package.delete({
+            where: { id: parseInt(id) }
+        });
+        
+        res.json({ message: 'Package deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to delete package' });
+    }
+});
+
+// GET /packages/tiers/list - List all tiers (for membership upgrades)
+router.get('/tiers/list', async (req, res) => {
     try {
         const tiers = await prisma.tier.findMany({
             orderBy: { onboardingFee: 'asc' }
         });
         res.json(tiers);
     } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch membership tiers' });
-    }
-});
-
-// POST /api/packages/upgrade - Upgrade Membership Tier
-router.post('/upgrade', authenticateToken, async (req, res) => {
-    try {
-        const { tierId } = req.body;
-        const userId = req.user.userId;
-
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            include: { tier: true }
-        });
-        const newTier = await prisma.tier.findUnique({ where: { id: parseInt(tierId) } });
-
-        if (!newTier) return res.status(404).json({ error: 'Tier not found' });
-
-        // Tier upgrade logic
-        const upgradeFee = newTier.upgradeFee;
-
-        if (user.walletBalance < upgradeFee) {
-            return res.status(400).json({ error: `Insufficient balance for upgrade. Required: ₦${upgradeFee}` });
-        }
-
-        await prisma.$transaction(async (tx) => {
-            await tx.user.update({
-                where: { id: userId },
-                data: {
-                    tierId: newTier.id,
-                    walletBalance: { decrement: upgradeFee }
-                }
-            });
-
-            await tx.transaction.create({
-                data: {
-                    userId,
-                    amount: upgradeFee,
-                    type: 'UPGRADE_FEE',
-                    ledgerType: 'COMPANY',
-                    direction: 'IN',
-                    status: 'SUCCESS',
-                    description: `Upgrade from ${user.tier?.name || 'NONE'} to ${newTier.name}`,
-                    reference: `UPG-${userId}-${Date.now()}`
-                }
-            });
-        });
-
-        res.json({ message: `Successfully upgraded to ${newTier.name} tier` });
-    } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Upgrade failed' });
-    }
-});
-
-// Admin Control: Add/Update Tier
-router.post('/', authenticateToken, isOps, async (req, res) => {
-    try {
-        const { name, weeklyAmount, onboardingFee, maintenanceFee, upgradeFee, maxWithdrawal, bvThreshold } = req.body;
-        const tier = await prisma.tier.upsert({
-            where: { name },
-            update: {
-                weeklyAmount: parseFloat(weeklyAmount),
-                onboardingFee: parseFloat(onboardingFee),
-                maintenanceFee: parseFloat(maintenanceFee),
-                upgradeFee: parseFloat(upgradeFee),
-                maxWithdrawal: maxWithdrawal ? parseFloat(maxWithdrawal) : null,
-                bvThreshold: bvThreshold ? parseFloat(bvThreshold) : null
-            },
-            create: {
-                name,
-                weeklyAmount: parseFloat(weeklyAmount),
-                onboardingFee: parseFloat(onboardingFee),
-                maintenanceFee: parseFloat(maintenanceFee),
-                upgradeFee: parseFloat(upgradeFee),
-                maxWithdrawal: maxWithdrawal ? parseFloat(maxWithdrawal) : null,
-                bvThreshold: bvThreshold ? parseFloat(bvThreshold) : null
-            }
-        });
-        res.status(201).json(tier);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Failed to manage tier' });
+        res.status(500).json({ error: 'Failed to fetch tiers' });
     }
 });
 

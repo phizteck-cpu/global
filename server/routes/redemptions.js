@@ -1,112 +1,244 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import prisma from '../prisma/client.js';
-import { authenticateToken, isOps } from '../middleware/auth.js';
+import { authenticateToken, isSuperAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// GET /inventory - View Available Food Items
-router.get('/inventory', authenticateToken, async (req, res) => {
+// GET /redemptions - List user's redemptions
+router.get('/', authenticateToken, async (req, res) => {
     try {
-        const items = await prisma.inventory.findMany({
-            orderBy: { name: 'asc' }
+        const redemptions = await prisma.redemption.findMany({
+            where: { userId: req.user.userId },
+            include: { 
+                package: { select: { id: true, name: true, price: true, bvValue: true } }
+            },
+            orderBy: { createdAt: 'desc' }
         });
-        res.json(items);
+        res.json(redemptions);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Failed to fetch inventory' });
+        res.status(500).json({ error: 'Failed to fetch redemptions' });
     }
 });
 
-// Admin: Add Inventory Item
-router.post('/inventory', authenticateToken, isOps, async (req, res) => {
-
-    try {
-        const { name, quantity, unit, priceEstimate } = req.body;
-        const newItem = await prisma.inventory.create({
-            data: {
-                name,
-                quantity: parseInt(quantity),
-                unit,
-                priceEstimate: parseFloat(priceEstimate)
-            }
-        });
-        res.status(201).json(newItem);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Failed to add inventory' });
-    }
-});
-
-// POST /redemptions - Request Store Item / Benefit
-router.post('/redemptions', authenticateToken, async (req, res) => {
+// POST /redemptions - Create redemption request
+router.post('/', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.userId;
-        const { inventoryId, deliveryAddress, pin } = req.body;
+        const { packageId, pointsToUse, pin } = req.body;
 
-        // 1. Get Store Item
-        const item = await prisma.inventory.findUnique({ where: { id: parseInt(inventoryId) } });
-        if (!item || item.quantity < 1) {
-            return res.status(400).json({ error: 'Item out of stock or invalid' });
-        }
-
-        const user = await prisma.user.findUnique({
-            where: { id: userId },
-            include: { tier: true }
+        // Get the package
+        const pkg = await prisma.package.findUnique({
+            where: { id: parseInt(packageId) }
         });
 
-        if (!user.transactionPin) {
-            return res.status(400).json({ error: 'Transaction PIN not set. Please set it in profile settings.' });
+        if (!pkg) {
+            return res.status(404).json({ error: 'Package not found' });
         }
 
-        const isPinMatch = await bcrypt.compare(pin, user.transactionPin);
-        if (!isPinMatch) {
-            return res.status(400).json({ error: 'Incorrect Transaction PIN' });
+        if (!pkg.isActive) {
+            return res.status(400).json({ error: 'Package is not available' });
         }
 
-        if (!user.tier) {
-            return res.status(400).json({ error: 'Active membership tier required.' });
+        // Check quantity if limited
+        if (pkg.maxQuantity !== null) {
+            const existingRedemptions = await prisma.redemption.count({
+                where: { packageId: pkg.id, status: { notIn: ['REJECTED', 'CANCELLED'] } }
+            });
+            if (existingRedemptions >= pkg.maxQuantity) {
+                return res.status(400).json({ error: 'Package is sold out' });
+            }
         }
 
-        // 3. Create Request
-        await prisma.$transaction(async (tx) => {
-            // Log Request
-            await tx.redemption.create({
+        // Get user
+        const user = await prisma.user.findUnique({
+            where: { id: userId }
+        });
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Verify transaction PIN if provided
+        if (user.transactionPin) {
+            if (!pin) {
+                return res.status(400).json({ error: 'Transaction PIN required' });
+            }
+            const isPinMatch = await bcrypt.compare(pin, user.transactionPin);
+            if (!isPinMatch) {
+                return res.status(400).json({ error: 'Incorrect Transaction PIN' });
+            }
+        }
+
+        // Calculate amount to pay (price minus points if applicable)
+        const pointsUsed = parseFloat(pointsToUse) || 0;
+        let finalAmount = pkg.price;
+        let pointsDeducted = 0;
+
+        if (pointsUsed > 0) {
+            // Use BV points if available
+            if (user.bvBalance >= pointsUsed) {
+                pointsDeducted = pointsUsed;
+                finalAmount = Math.max(0, pkg.price - pointsUsed);
+            } else {
+                return res.status(400).json({ error: 'Insufficient BV balance' });
+            }
+        }
+
+        // Check wallet balance for remaining amount
+        if (finalAmount > 0 && user.walletBalance < finalAmount) {
+            return res.status(400).json({ error: `Insufficient wallet balance. Required: ₦${finalAmount.toFixed(2)}` });
+        }
+
+        // Create redemption
+        const redemption = await prisma.$transaction(async (tx) => {
+            // Create redemption record
+            const redemption = await tx.redemption.create({
                 data: {
                     userId,
-                    packageId: user.tierId,
-                    status: 'REQUESTED',
-                    deliveryAddress: `${deliveryAddress} [ITEM: ${item.name} | Qty: 1]`
+                    packageId: pkg.id,
+                    amount: finalAmount,
+                    pointsUsed: pointsDeducted,
+                    status: 'PENDING'
                 }
             });
 
-            // Reserve item
-            await tx.inventory.update({
-                where: { id: item.id },
-                data: { quantity: { decrement: 1 } }
-            });
+            // Deduct from wallet if needed
+            if (finalAmount > 0) {
+                await tx.user.update({
+                    where: { id: userId },
+                    data: { walletBalance: { decrement: finalAmount } }
+                });
+
+                // Create transaction record
+                await tx.transaction.create({
+                    data: {
+                        userId,
+                        amount: finalAmount,
+                        type: 'REDEMPTION',
+                        ledgerType: 'VIRTUAL',
+                        direction: 'OUT',
+                        status: 'SUCCESS',
+                        description: `Redemption: ${pkg.name}`,
+                        reference: `RED-${userId}-${Date.now()}`
+                    }
+                });
+            }
+
+            // Deduct BV points if used
+            if (pointsDeducted > 0) {
+                await tx.user.update({
+                    where: { id: userId },
+                    data: { bvBalance: { decrement: pointsDeducted } }
+                });
+            }
+
+            return redemption;
         });
 
-        res.status(201).json({ message: 'Request submitted successfully' });
-
+        res.status(201).json({ 
+            message: 'Redemption request submitted successfully',
+            redemption: {
+                id: redemption.id,
+                package: pkg.name,
+                amount: redemption.amount,
+                pointsUsed: redemption.pointsUsed,
+                status: redemption.status
+            }
+        });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Request failed' });
+        res.status(500).json({ error: 'Failed to create redemption' });
     }
 });
 
-// GET /redemptions - My Redemptions
-router.get('/redemptions', authenticateToken, async (req, res) => {
+// PUT /redemptions/:id/status - Update redemption status (admin)
+router.put('/:id/status', authenticateToken, isSuperAdmin, async (req, res) => {
     try {
-        const history = await prisma.redemption.findMany({
-            where: { userId: req.user.userId },
-            orderBy: { requestDate: 'desc' },
-            include: { package: true }
+        const { id } = req.params;
+        const { status, adminNote } = req.body;
+
+        const validStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ error: 'Invalid status' });
+        }
+
+        const redemption = await prisma.redemption.findUnique({
+            where: { id: parseInt(id) }
         });
-        res.json(history);
+
+        if (!redemption) {
+            return res.status(404).json({ error: 'Redemption not found' });
+        }
+
+        const updatedRedemption = await prisma.redemption.update({
+            where: { id: parseInt(id) },
+            data: {
+                status,
+                adminNote: adminNote || null,
+                processedAt: status !== 'PENDING' ? new Date() : null
+            }
+        });
+
+        // If rejected, refund the wallet and BV
+        if (status === 'REJECTED' && redemption.amount > 0) {
+            await prisma.user.update({
+                where: { id: redemption.userId },
+                data: {
+                    walletBalance: { increment: redemption.amount },
+                    bvBalance: { increment: redemption.pointsUsed }
+                }
+            });
+        }
+
+        res.json({ 
+            message: 'Redemption status updated',
+            redemption: updatedRedemption
+        });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Failed to fetch history' });
+        res.status(500).json({ error: 'Failed to update redemption status' });
+    }
+});
+
+// GET /redemptions/all - List all redemptions (admin)
+router.get('/all', authenticateToken, isSuperAdmin, async (req, res) => {
+    try {
+        const { status, page = 1, limit = 20 } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const where = {};
+        if (status) {
+            where.status = status;
+        }
+
+        const [redemptions, total] = await Promise.all([
+            prisma.redemption.findMany({
+                where,
+                skip,
+                take: parseInt(limit),
+                include: {
+                    user: { select: { id: true, firstName: true, lastName: true, email: true } },
+                    package: { select: { id: true, name: true, price: true } }
+                },
+                orderBy: { createdAt: 'desc' }
+            }),
+            prisma.redemption.count({ where })
+        ]);
+
+        res.json({
+            redemptions,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch redemptions' });
     }
 });
 
