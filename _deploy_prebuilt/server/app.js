@@ -71,26 +71,30 @@ apiRouter.use('/redemptions', redemptionRoutes);
 apiRouter.use('/admin', adminRoutes);
 apiRouter.use('/dashboard', dashboardRoutes);
 
-// Mount the API Router
+// 1. Primary API Mount
 app.use('/api', apiRouter);
-app.use('/', apiRouter); // Fallback for proxies that strip /api
 
-// 404 for any unmatched /api route
-app.use('/api', (req, res) => {
-    console.log(`404 at /api: ${req.method} ${req.url}`);
-    res.status(404).json({ error: 'API endpoint not found', method: req.method, path: req.url });
-});
-
-// Serve Static Files (Frontend)
+// 2. Serve Static Assets
 app.use(express.static(path.join(__dirname, '../dist')));
 
-app.get('*', (req, res) => {
-    // Only serve index.html if not an API route
-    if (!req.path.startsWith('/api')) {
-        res.sendFile(path.join(__dirname, '../dist/index.html'));
-    } else {
-        res.status(404).json({ error: 'Endpoint not found' });
+// 3. Fallback API Mount (for proxies stripping /api)
+// Only matches if it starts with one of the known API paths
+const apiPaths = ['/auth', '/users', '/wallet', '/packages', '/contributions', '/referrals', '/bonuses', '/notifications', '/withdrawals', '/redemptions', '/admin', '/dashboard', '/health'];
+app.use((req, res, next) => {
+    if (apiPaths.some(p => req.path.startsWith(p))) {
+        return apiRouter(req, res, next);
     }
+    next();
+});
+
+// 4. Catch-all for SPA (Frontend Routes)
+app.get('*', (req, res) => {
+    // If it's an /api path that wasn't caught, return JSON 404
+    if (req.path.startsWith('/api')) {
+        return res.status(404).json({ error: 'API endpoint not found', path: req.url });
+    }
+    // Otherwise serve the React app
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 export default app;
