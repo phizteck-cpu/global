@@ -33,8 +33,13 @@ const app = express();
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json());
 
-// 🩺 Health Check
-app.get('/api/health', (req, res) => res.json({ status: 'up', timestamp: new Date() }));
+// 📝 Request Logger
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+});
+
+const apiRouter = express.Router();
 
 // ⚙️ Contribution Automation Scheduler (Daily at Midnight)
 if (process.env.NODE_ENV !== 'test') {
@@ -43,25 +48,38 @@ if (process.env.NODE_ENV !== 'test') {
     });
 }
 
-// Admin: Manual Automation Trigger
-app.post('/api/admin/automation/run', authenticateToken, isSuperAdmin, async (req, res) => {
+// 🩺 Health Check
+apiRouter.get('/health', (req, res) => res.json({ status: 'up', timestamp: new Date() }));
+
+// Admin Automation
+apiRouter.post('/admin/automation/run', authenticateToken, isSuperAdmin, async (req, res) => {
     await runDailyContributions();
     res.json({ message: 'Automation worker triggered manually' });
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/wallet', walletRoutes);
-app.use('/api/packages', packageRoutes);
-app.use('/api/contributions', contributionRoutes);
-app.use('/api/referrals', referralRoutes);
-app.use('/api/bonuses', bonusRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/withdrawals', withdrawalRoutes);
-app.use('/api/redemptions', redemptionRoutes); // Handles /redemptions
-app.use('/api/admin', adminRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+// API Route Mount Points
+apiRouter.use('/auth', authRoutes);
+apiRouter.use('/users', userRoutes);
+apiRouter.use('/wallet', walletRoutes);
+apiRouter.use('/packages', packageRoutes);
+apiRouter.use('/contributions', contributionRoutes);
+apiRouter.use('/referrals', referralRoutes);
+apiRouter.use('/bonuses', bonusRoutes);
+apiRouter.use('/notifications', notificationRoutes);
+apiRouter.use('/withdrawals', withdrawalRoutes);
+apiRouter.use('/redemptions', redemptionRoutes);
+apiRouter.use('/admin', adminRoutes);
+apiRouter.use('/dashboard', dashboardRoutes);
+
+// Mount the API Router
+app.use('/api', apiRouter);
+app.use('/', apiRouter); // Fallback for proxies that strip /api
+
+// 404 for any unmatched /api route
+app.use('/api', (req, res) => {
+    console.log(`404 at /api: ${req.method} ${req.url}`);
+    res.status(404).json({ error: 'API endpoint not found', method: req.method, path: req.url });
+});
 
 // Serve Static Files (Frontend)
 app.use(express.static(path.join(__dirname, '../dist')));
