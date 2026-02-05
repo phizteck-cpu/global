@@ -74,27 +74,36 @@ apiRouter.use('/dashboard', dashboardRoutes);
 // 1. Primary API Mount
 app.use('/api', apiRouter);
 
-// 2. Serve Static Assets
-app.use(express.static(path.join(__dirname, '../dist')));
+// 2. Resolve Static Path
+const distPath = path.resolve(__dirname, '../dist');
+const indexPath = path.join(distPath, 'index.html');
 
-// 3. Fallback API Mount (for proxies stripping /api)
-// Only matches if it starts with one of the known API paths
+// 3. Serve Static Assets
+app.use(express.static(distPath));
+
+// 4. Fallback API Mount (for proxies stripping /api)
 const apiPaths = ['/auth', '/users', '/wallet', '/packages', '/contributions', '/referrals', '/bonuses', '/notifications', '/withdrawals', '/redemptions', '/admin', '/dashboard', '/health'];
 app.use((req, res, next) => {
-    if (apiPaths.some(p => req.path.startsWith(p))) {
+    const isApiPath = apiPaths.some(p => req.path.startsWith(p) || req.originalUrl.startsWith(p));
+    if (isApiPath) {
         return apiRouter(req, res, next);
     }
     next();
 });
 
-// 4. Catch-all for SPA (Frontend Routes)
+// 5. Catch-all for SPA (Frontend Routes)
 app.get('*', (req, res) => {
     // If it's an /api path that wasn't caught, return JSON 404
-    if (req.path.startsWith('/api')) {
+    if (req.path.startsWith('/api') || req.originalUrl.startsWith('/api')) {
         return res.status(404).json({ error: 'API endpoint not found', path: req.url });
     }
     // Otherwise serve the React app
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
+    res.sendFile(indexPath, (err) => {
+        if (err) {
+            console.error('Error sending index.html:', err);
+            res.status(500).send('Frontend build missing or inaccessible.');
+        }
+    });
 });
 
 export default app;
