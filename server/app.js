@@ -59,7 +59,7 @@ app.use('/api/referrals', referralRoutes);
 app.use('/api/bonuses', bonusRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/withdrawals', withdrawalRoutes);
-app.use('/api', redemptionRoutes); // Handles /inventory and /redemptions
+app.use('/api/redemptions', redemptionRoutes); // Handles /redemptions
 app.use('/api/admin', adminRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 

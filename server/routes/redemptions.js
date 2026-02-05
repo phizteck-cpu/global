@@ -10,7 +10,7 @@ router.get('/', authenticateToken, async (req, res) => {
     try {
         const redemptions = await prisma.redemption.findMany({
             where: { userId: req.user.userId },
-            include: { 
+            include: {
                 package: { select: { id: true, name: true, price: true, bvValue: true } }
             },
             orderBy: { createdAt: 'desc' }
@@ -137,7 +137,7 @@ router.post('/', authenticateToken, async (req, res) => {
             return redemption;
         });
 
-        res.status(201).json({ 
+        res.status(201).json({
             message: 'Redemption request submitted successfully',
             redemption: {
                 id: redemption.id,
@@ -192,7 +192,7 @@ router.put('/:id/status', authenticateToken, isSuperAdmin, async (req, res) => {
             });
         }
 
-        res.json({ 
+        res.json({
             message: 'Redemption status updated',
             redemption: updatedRedemption
         });
