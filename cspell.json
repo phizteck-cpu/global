@@ -1,12 +1,19 @@
 {
   "version": "0.2",
   "words": [
+    "hashedpasswordplaceholder",
+    "Paystack",
     "SUPERADMIN",
+    "VIRT",
     "auditlog",
     "errorlevel",
+    "healthcheck",
+    "initdb",
     "mysqladmin",
+    "phpmyadmin",
     "prootpassword",
     "rootpassword",
+    "signup",
     "valuehills"
   ]
 }
