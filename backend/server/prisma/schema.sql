@@ -269,20 +269,20 @@ ON DUPLICATE KEY UPDATE `key`=`key`;
 
 -- Insert Admin User (Password: MyPassword123)
 -- Hash: $2a$10$ewvJmGiybJZpB8ooTR57YenEK5uYHHaXggNI/QvBwRuVx/6Ykr64i
-INSERT INTO `User` (email, username, password, firstName, lastName, role, status, kycStatus) VALUES
-('admin@valuehills.com', 'admin', '$2a$10$ewvJmGiybJZpB8ooTR57YenEK5uYHHaXggNI/QvBwRuVx/6Ykr64i', 'System', 'Administrator', 'SUPERADMIN', 'ACTIVE', 'VERIFIED')
+INSERT INTO `User` (email, username, password, firstName, lastName, role, status, kycStatus, referralCode) VALUES
+('admin@valuehills.com', 'admin', '$2a$10$ewvJmGiybJZpB8ooTR57YenEK5uYHHaXggNI/QvBwRuVx/6Ykr64i', 'System', 'Administrator', 'SUPERADMIN', 'ACTIVE', 'VERIFIED', 'REF-ADMIN-001')
 ON DUPLICATE KEY UPDATE username=username;
 
 -- Insert Finance Admin (Password: Finance123)
 -- Hash: $2a$10$hashedpasswordplaceholder123456789
-INSERT INTO `User` (email, username, password, firstName, lastName, role, status, kycStatus) VALUES
-('finance@valuehills.com', 'finance_admin', '$2a$10$hashedpasswordplaceholder123456789', 'Finance', 'Admin', 'FINANCE_ADMIN', 'ACTIVE', 'VERIFIED')
+INSERT INTO `User` (email, username, password, firstName, lastName, role, status, kycStatus, referralCode) VALUES
+('finance@valuehills.com', 'finance_admin', '$2a$10$hashedpasswordplaceholder123456789', 'Finance', 'Admin', 'FINANCE_ADMIN', 'ACTIVE', 'VERIFIED', 'REF-FINANCE-001')
 ON DUPLICATE KEY UPDATE username=username;
 
 -- Insert Operations Admin (Password: Ops123)
 -- Hash: $2a$10$hashedpasswordplaceholder987654321
-INSERT INTO `User` (email, username, password, firstName, lastName, role, status, kycStatus) VALUES
-('ops@valuehills.com', 'ops_admin', '$2a$10$hashedpasswordplaceholder987654321', 'Operations', 'Admin', 'OPS_ADMIN', 'ACTIVE', 'VERIFIED')
+INSERT INTO `User` (email, username, password, firstName, lastName, role, status, kycStatus, referralCode) VALUES
+('ops@valuehills.com', 'ops_admin', '$2a$10$hashedpasswordplaceholder987654321', 'Operations', 'Admin', 'OPS_ADMIN', 'ACTIVE', 'VERIFIED', 'REF-OPS-001')
 ON DUPLICATE KEY UPDATE username=username;
 
 -- Insert Sample Member (Password: user123)

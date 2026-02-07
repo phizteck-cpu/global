@@ -1,6 +1,7 @@
 ﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../api';
 import { ShieldCheck, Lock, Mail } from 'lucide-react';
 
 const AdminLogin = () => {
@@ -9,7 +10,7 @@ const AdminLogin = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
-    const { login, logout } = useAuth();
+    const { login: memberLogin } = useAuth();
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -17,22 +18,19 @@ const AdminLogin = () => {
         setLoading(true);
 
         try {
-            const result = await login(username, password);
-
-            if (result.success) {
-                const adminRoles = ['ADMIN', 'SUPERADMIN', 'FINANCE_ADMIN', 'OPS_ADMIN', 'SUPPORT_ADMIN', 'ACCOUNTANT'];
-                if (adminRoles.includes(result.role)) {
-                    navigate('/admin');
-                } else {
-                    // Security: If they successfully authenticated but are NOT an admin, 
-                    // we log them out and show generic failure message.
-                    await logout();
-                    setError('Login failed');
-                }
-            } else {
-                // As requested, always show generic "Login failed" message
-                setError('Login failed');
-            }
+            // Direct admin login
+            const res = await api.post('/admin/login', { username, password });
+            
+            const token = res.data.token;
+            const userData = res.data.user;
+            
+            localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify(userData));
+            
+            // Update auth context
+            await memberLogin(username, password);
+            
+            navigate('/admin');
         } catch (err) {
             setError('Login failed');
         } finally {
@@ -95,7 +93,7 @@ const AdminLogin = () => {
 
                     <form onSubmit={handleLogin} className="space-y-5">
                         <div className="space-y-1">
-                            <label className="text-xs font-bold uppercase tracking-widest text-noble-gray ml-1">Work Email or Username</label>
+                            <label className="text-xs font-bold uppercase tracking-widest text-noble-gray ml-1">Username</label>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-noble-gray group-focus-within:text-red-500 transition-colors">
                                     <Mail size={18} />
@@ -106,7 +104,7 @@ const AdminLogin = () => {
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     className="w-full pl-12 pr-5 py-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-red-500/50 focus:ring-4 focus:ring-red-500/5 transition-all text-white placeholder-white/20"
-                                    placeholder="admin@example.com or username"
+                                    placeholder="Enter your username"
                                 />
                             </div>
                         </div>

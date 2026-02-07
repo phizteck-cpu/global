@@ -160,25 +160,20 @@ router.post('/signup', validateSignup, async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
-        const identifier = (username || '').trim();
 
-        if (!identifier || !password) {
+        if (!username || !password) {
             return res.status(400).json({ message: 'Username and password are required' });
         }
 
         const user = await prisma.user.findFirst({
             where: {
-                OR: [
-                    { username: identifier },
-                    { email: identifier },
-                    { phone: identifier }
-                ]
+                username: username.trim()
             },
             include: { tier: true }
         });
 
         if (!user) {
-            return res.status(400).json({ message: 'Invalid credentials' });
+            return res.status(400).json({ message: 'Invalid username or password' });
         }
 
         // Check if account is suspended
@@ -188,7 +183,7 @@ router.post('/login', async (req, res) => {
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ message: 'Invalid credentials' });
+            return res.status(400).json({ message: 'Invalid username or password' });
         }
 
         // Generate tokens

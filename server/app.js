@@ -20,6 +20,7 @@ import withdrawalRoutes from './routes/withdrawals.js';
 import cron from 'node-cron';
 import { runDailyContributions } from './services/contributionAutomation.js';
 import { authenticateToken, isAdmin, isSuperAdmin } from './middleware/auth.js';
+import { authRateLimiter, apiRateLimiter, adminRateLimiter } from './middleware/rateLimiter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,8 +59,8 @@ apiRouter.post('/admin/automation/run', authenticateToken, isSuperAdmin, async (
     res.json({ message: 'Automation worker triggered manually' });
 });
 
-// API Route Mount Points
-apiRouter.use('/auth', authRoutes);
+// API Route Mount Points (with rate limiting on auth)
+apiRouter.use('/auth', authRateLimiter, authRoutes);
 apiRouter.use('/users', userRoutes);
 apiRouter.use('/wallet', walletRoutes);
 apiRouter.use('/packages', packageRoutes);

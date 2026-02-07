@@ -1,188 +1,352 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, EyeOff, Shield, User, Mail, Lock, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
 import api from '../api';
-import { useAuth } from '../context/AuthContext';
 
 const Signup = () => {
-    const navigate = useNavigate();
-    const { register } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
+  const [serverError, setServerError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
-    const [formData, setFormData] = useState({
-        firstName: '',
-        lastName: '',
-        email: '',
-        username: '',
-        phone: '',
-        password: '',
-        tierId: ''
-    });
-    const [tiers, setTiers] = useState([]);
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      username: '',
+      password: '',
+      confirmPassword: '',
+    },
+    mode: 'onBlur',
+  });
 
-    useEffect(() => {
-        const fetchTiers = async () => {
-            try {
-                const res = await api.get('/packages');
-                setTiers(res.data);
-                if (res.data.length > 0) {
-                    setFormData(prev => ({ ...prev, tierId: res.data[0].id }));
-                }
-            } catch (err) {
-                console.error('Failed to load tiers', err);
-            }
-        };
-        fetchTiers();
-    }, []);
+  const password = watch('password', '');
 
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+  const passwordStrength = React.useMemo(() => {
+    const pwd = password;
+    const checks = {
+      length: pwd.length >= 8,
+      uppercase: /[A-Z]/.test(pwd),
+      lowercase: /[a-z]/.test(pwd),
+      number: /\d/.test(pwd),
     };
+    const score = Object.values(checks).filter(Boolean).length;
+    return { checks, score };
+  }, [password]);
 
-    const handleSignup = async (e) => {
-        e.preventDefault();
-        setError('');
-        setLoading(true);
+  const onSubmit = async (data) => {
+    setServerError('');
+    setIsLoading(true);
 
-        const result = await register(formData);
+    try {
+      const result = await api.post('/auth/signup', {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        username: data.username,
+        password: data.password,
+      });
 
-        if (result.success) {
-            navigate('/dashboard');
-        } else {
-            setError(result.message);
-        }
-        setLoading(false);
-    };
+      const token = result.data.accessToken || result.data.token;
+      if (token && result.data.user) {
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(result.data.user));
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      setServerError(
+        error.response?.data?.message || error.response?.data?.error || 'Registration failed. Please try again.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12 relative overflow-hidden">
-            <div className="absolute top-0 left-1/3 w-[32rem] h-[32rem] bg-primary/10 rounded-full blur-[140px]" />
-            <div className="absolute bottom-0 right-1/4 w-[28rem] h-[28rem] bg-secondary/10 rounded-full blur-[140px]" />
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-10 relative overflow-hidden">
+      {/* Background Decor */}
+      <div className="absolute top-1/4 left-1/4 w-80 h-80 bg-primary/10 rounded-full blur-[100px]" />
+      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-secondary/10 rounded-full blur-[100px]" />
 
-            <div className="max-w-2xl w-full glass-panel p-8 rounded-3xl border border-white/10 shadow-2xl relative z-10">
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold font-heading text-white mb-2">Create Account</h1>
-                    <p className="text-noble-gray">Join the cooperative and start your journey</p>
-                </div>
-
-                {error && (
-                    <div className="mb-4 p-3 bg-red-500/10 text-red-300 text-sm rounded-lg border border-red-500/30">
-                        {error}
-                    </div>
-                )}
-
-                <form onSubmit={handleSignup} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-noble-gray mb-1">First Name</label>
-                            <input
-                                type="text"
-                                name="firstName"
-                                required
-                                className="w-full px-4 py-3 rounded-xl bg-surface border border-white/10 text-white placeholder-white/30 focus:ring-4 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all"
-                                placeholder="John"
-                                onChange={handleChange}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-noble-gray mb-1">Last Name</label>
-                            <input
-                                type="text"
-                                name="lastName"
-                                required
-                                className="w-full px-4 py-3 rounded-xl bg-surface border border-white/10 text-white placeholder-white/30 focus:ring-4 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all"
-                                placeholder="Doe"
-                                onChange={handleChange}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-noble-gray mb-1">Email Address</label>
-                            <input
-                                type="email"
-                                name="email"
-                                required
-                                className="w-full px-4 py-3 rounded-xl bg-surface border border-white/10 text-white placeholder-white/30 focus:ring-4 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all"
-                                placeholder="you@example.com"
-                                onChange={handleChange}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-noble-gray mb-1">Username</label>
-                            <input
-                                type="text"
-                                name="username"
-                                required
-                                className="w-full px-4 py-3 rounded-xl bg-surface border border-white/10 text-white placeholder-white/30 focus:ring-4 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all"
-                                placeholder="johndoe123"
-                                onChange={handleChange}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-noble-gray mb-1">Phone Number</label>
-                            <input
-                                type="tel"
-                                name="phone"
-                                required
-                                className="w-full px-4 py-3 rounded-xl bg-surface border border-white/10 text-white placeholder-white/30 focus:ring-4 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all"
-                                placeholder="+234..."
-                                onChange={handleChange}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-noble-gray mb-1">Password</label>
-                            <input
-                                type="password"
-                                name="password"
-                                required
-                                className="w-full px-4 py-3 rounded-xl bg-surface border border-white/10 text-white placeholder-white/30 focus:ring-4 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all"
-                                placeholder="��������"
-                                onChange={handleChange}
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-noble-gray mb-3">Select Membership Tier</label>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            {tiers.map((tier) => (
-                                <div
-                                    key={tier.id}
-                                    onClick={() => setFormData({ ...formData, tierId: tier.id })}
-                                    className={`cursor-pointer p-4 rounded-2xl border transition-all ${parseInt(formData.tierId) === tier.id ? 'border-primary bg-primary/10' : 'border-white/10 hover:border-white/30'}`}
-                                >
-                                    <h3 className="font-bold text-white">{tier.name}</h3>
-                                    <p className="text-sm text-noble-gray">?{tier.weeklyAmount.toLocaleString()}/wk</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="text-sm text-noble-gray mt-2 bg-white/5 p-3 rounded-lg border border-white/10 flex items-center gap-2">
-                        <span className="text-secondary">?</span>
-                        <span>Registration Fee: <span className="font-bold text-white">?{tiers.find(t => t.id === parseInt(formData.tierId))?.onboardingFee?.toLocaleString() || '0'}</span> (One-time)</span>
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full py-3 bg-primary text-background rounded-xl font-bold uppercase tracking-widest text-xs hover:shadow-glow hover:scale-[1.01] active:scale-[0.99] transition-all mt-4 disabled:opacity-70"
-                    >
-                        {loading ? 'Registering...' : 'Register & Pay Fee'}
-                    </button>
-                </form>
-
-                <p className="mt-6 text-center text-noble-gray">
-                    Already have an account? <Link to="/login" className="text-primary font-semibold hover:text-white">Login</Link>
-                </p>
-            </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-lg w-full glass-panel p-8 rounded-3xl border border-white/10 shadow-2xl relative z-10"
+      >
+        <div className="text-center mb-8">
+          <motion.div
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-4"
+          >
+            <Shield className="w-8 h-8 text-primary" />
+          </motion.div>
+          <h1 className="text-3xl font-bold font-heading mb-2">
+            <span className="text-white">Join</span>
+            <span className="text-primary"> ValueHills</span>
+          </h1>
+          <p className="text-noble-gray text-sm">Begin your cooperative journey today.</p>
         </div>
-    );
+
+        <AnimatePresence>
+          {serverError && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-6 p-4 bg-red-500/10 text-red-300 text-sm rounded-xl border border-red-500/30 flex items-start gap-3"
+            >
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+              <span>{serverError}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Name Fields */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-noble-gray ml-1">First Name</label>
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <input
+                  type="text"
+                  {...register('firstName', { required: 'First name is required', maxLength: 50 })}
+                  className={`w-full pl-11 pr-4 py-3 rounded-xl bg-surface border ${
+                    errors.firstName ? 'border-red-500/50' : 'border-white/10'
+                  } text-white placeholder-white/30 focus:ring-4 focus:ring-primary/10 outline-none transition-all`}
+                  placeholder="John"
+                  disabled={isLoading}
+                />
+              </div>
+              {errors.firstName && (
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-400 text-xs ml-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.firstName.message}
+                </motion.p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-noble-gray ml-1">Last Name</label>
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <input
+                  type="text"
+                  {...register('lastName', { required: 'Last name is required', maxLength: 50 })}
+                  className={`w-full pl-11 pr-4 py-3 rounded-xl bg-surface border ${
+                    errors.lastName ? 'border-red-500/50' : 'border-white/10'
+                  } text-white placeholder-white/30 focus:ring-4 focus:ring-primary/10 outline-none transition-all`}
+                  placeholder="Doe"
+                  disabled={isLoading}
+                />
+              </div>
+              {errors.lastName && (
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-400 text-xs ml-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.lastName.message}
+                </motion.p>
+              )}
+            </div>
+          </div>
+
+          {/* Email Field */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-noble-gray ml-1">Email Address</label>
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+              <input
+                type="email"
+                {...register('email', {
+                  required: 'Email is required',
+                  pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Invalid email format' },
+                })}
+                className={`w-full pl-11 pr-4 py-3 rounded-xl bg-surface border ${
+                  errors.email ? 'border-red-500/50' : 'border-white/10'
+                } text-white placeholder-white/30 focus:ring-4 focus:ring-primary/10 outline-none transition-all`}
+                placeholder="john@example.com"
+                disabled={isLoading}
+              />
+            </div>
+            {errors.email && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-400 text-xs ml-1 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                {errors.email.message}
+              </motion.p>
+            )}
+          </div>
+
+          {/* Username Field */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-noble-gray ml-1">Username</label>
+            <div className="relative">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+              <input
+                type="text"
+                {...register('username', {
+                  required: 'Username is required',
+                  minLength: { value: 3, message: 'At least 3 characters' },
+                  maxLength: { value: 20, message: 'Maximum 20 characters' },
+                  pattern: { value: /^[a-zA-Z0-9_]+$/, message: 'Letters, numbers, underscores only' },
+                })}
+                className={`w-full pl-11 pr-4 py-3 rounded-xl bg-surface border ${
+                  errors.username ? 'border-red-500/50' : 'border-white/10'
+                } text-white placeholder-white/30 focus:ring-4 focus:ring-primary/10 outline-none transition-all`}
+                placeholder="johndoe"
+                disabled={isLoading}
+              />
+            </div>
+            {errors.username && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-400 text-xs ml-1 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                {errors.username.message}
+              </motion.p>
+            )}
+          </div>
+
+          {/* Password Field */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-noble-gray ml-1">Password</label>
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                {...register('password', {
+                  required: 'Password is required',
+                  minLength: { value: 8, message: 'Minimum 8 characters' },
+                  pattern: {
+                    value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).*$/,
+                    message: 'Must include uppercase, lowercase, and number',
+                  },
+                })}
+                className={`w-full pl-11 pr-12 py-3 rounded-xl bg-surface border ${
+                  errors.password ? 'border-red-500/50' : 'border-white/10'
+                } text-white placeholder-white/30 focus:ring-4 focus:ring-primary/10 outline-none transition-all`}
+                placeholder="••••••••"
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+
+            {/* Password Strength Indicator */}
+            {password && (
+              <div className="mt-2 space-y-1">
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4].map((level) => (
+                    <motion.div
+                      key={level}
+                      initial={{ scaleX: 0 }}
+                      animate={{ scaleX: 1 }}
+                      className={`h-1 flex-1 rounded-full transition-colors ${
+                        passwordStrength.score >= level
+                          ? passwordStrength.score <= 2
+                            ? 'bg-red-500'
+                            : passwordStrength.score === 3
+                            ? 'bg-yellow-500'
+                            : 'bg-emerald-500'
+                          : 'bg-white/20'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-1 text-[10px] text-white/40">
+                  <span className={passwordStrength.checks.length ? 'text-emerald-400' : ''}>8+ chars</span>
+                  <span className={passwordStrength.checks.uppercase ? 'text-emerald-400' : ''}>Uppercase</span>
+                  <span className={passwordStrength.checks.lowercase ? 'text-emerald-400' : ''}>Lowercase</span>
+                  <span className={passwordStrength.checks.number ? 'text-emerald-400' : ''}>Number</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Confirm Password Field */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-noble-gray ml-1">Confirm Password</label>
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                {...register('confirmPassword', {
+                  required: 'Please confirm your password',
+                  validate: (value) => value === password || 'Passwords do not match',
+                })}
+                className={`w-full pl-11 pr-4 py-3 rounded-xl bg-surface border ${
+                  errors.confirmPassword ? 'border-red-500/50' : 'border-white/10'
+                } text-white placeholder-white/30 focus:ring-4 focus:ring-primary/10 outline-none transition-all`}
+                placeholder="••••••••"
+                disabled={isLoading}
+              />
+            </div>
+            {errors.confirmPassword && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-400 text-xs ml-1 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                {errors.confirmPassword.message}
+              </motion.p>
+            )}
+          </div>
+
+          {/* Terms */}
+          <p className="text-xs text-noble-gray text-center">
+            By registering, you agree to our{' '}
+            <Link to="/terms" className="text-primary hover:underline">
+              Terms of Service
+            </Link>{' '}
+            and{' '}
+            <Link to="/privacy" className="text-primary hover:underline">
+              Privacy Policy
+            </Link>
+          </p>
+
+          {/* Submit Button */}
+          <motion.button
+            type="submit"
+            disabled={isSubmitting || isLoading}
+            whileHover={{ scale: isSubmitting || isLoading ? 1 : 1.02 }}
+            whileTap={{ scale: isSubmitting || isLoading ? 1 : 0.98 }}
+            className="w-full py-4 bg-primary text-background rounded-xl font-bold uppercase tracking-widest text-xs hover:shadow-glow transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {isSubmitting || isLoading ? (
+              <>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  className="w-5 h-5 border-2 border-background border-t-transparent rounded-full"
+                />
+                Creating Account...
+              </>
+            ) : (
+              <>
+                Create Account
+                <ArrowRight className="w-5 h-5" />
+              </>
+            )}
+          </motion.button>
+        </form>
+
+        <p className="mt-6 text-center text-noble-gray text-sm">
+          Already a member?{' '}
+          <Link to="/login" className="text-primary font-semibold hover:text-white transition-colors">
+            Sign In
+          </Link>
+        </p>
+      </motion.div>
+    </div>
+  );
 };
 
 export default Signup;

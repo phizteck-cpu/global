@@ -20,12 +20,28 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (username, password) => {
         try {
-            const res = await api.post('/auth/login', { username, password });
-            const token = res.data.accessToken || res.data.token;
+            // Try member login first
+            let res;
+            try {
+                res = await api.post('/auth/login', { username, password });
+            } catch (authError) {
+                // If member login fails, try admin login
+                res = await api.post('/admin/login', { username, password });
+            }
+            
+            const token = res.data.accessToken || res.data.token || res.data;
+            const userData = res.data.user || { 
+                id: res.data.userId || res.data.id,
+                role: res.data.role,
+                username: username,
+                firstName: 'Admin',
+                lastName: 'User'
+            };
+            
             localStorage.setItem('token', token);
-            localStorage.setItem('user', JSON.stringify(res.data.user));
-            setUser(res.data.user);
-            return { success: true, role: res.data.user.role };
+            localStorage.setItem('user', JSON.stringify(userData));
+            setUser(userData);
+            return { success: true, role: userData.role };
         } catch (error) {
             const message =
                 error.response?.data?.message ||

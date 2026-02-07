@@ -252,6 +252,12 @@ INSERT INTO `User` (email, username, password, firstName, lastName, role, status
 ('admin@valuehills.com', 'admin', '$2a$10$ewvJmGiybJZpB8ooTR57YenEK5uYHHaXggNI/QvBwRuVx/6Ykr64i', 'System', 'Administrator', 'SUPERADMIN', 'ACTIVE', 'VERIFIED')
 ON DUPLICATE KEY UPDATE username=username;
 
+-- Insert Super Admin User (Password: SuperSecretPassword!123)
+-- Hash: $2a$10$qDtfbC.fO7StYqlv.BYC5.RfdI9xaJAWTAlXrYDZec7XVdrtNeioe
+INSERT INTO `User` (email, username, password, firstName, lastName, role, status, kycStatus, emailVerified) VALUES
+('superadmin@valuehills.com', 'superadmin', '$2a$10$qDtfbC.fO7StYqlv.BYC5.RfdI9xaJAWTAlXrYDZec7XVdrtNeioe', 'Super', 'Administrator', 'SUPERADMIN', 'ACTIVE', 'VERIFIED', TRUE)
+ON DUPLICATE KEY UPDATE username=username;
+
 -- Insert Sample Member (Password: user123)
 -- Hash: $2a$10$0VjXwt4QqzdGozGra2LlyuVk1Isra35kNYeQLu28NUTacVUThaSf2
 INSERT INTO `User` (email, username, password, firstName, lastName, role, status, kycStatus, tierId, referralCode) VALUES

@@ -14,16 +14,25 @@ const router = express.Router();
 // Admin Login
 router.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { username, email, password } = req.body;
         
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email and password are required' });
+        if ((!username && !email) || !password) {
+            return res.status(400).json({ error: 'Username/email and password are required' });
         }
 
         const admin = await prisma.user.findFirst({
             where: {
-                email,
-                role: { in: ['ADMIN', 'SUPERADMIN', 'FINANCE_ADMIN', 'OPS_ADMIN', 'SUPPORT_ADMIN', 'ACCOUNTANT'] }
+                AND: [
+                    {
+                        OR: [
+                            { username: username || undefined },
+                            { email: email || undefined }
+                        ]
+                    },
+                    {
+                        role: { in: ['ADMIN', 'SUPERADMIN', 'FINANCE_ADMIN', 'OPS_ADMIN', 'SUPPORT_ADMIN', 'ACCOUNTANT'] }
+                    }
+                ]
             }
         });
 
@@ -282,8 +291,6 @@ router.patch('/users/:id/tier', authenticateToken, isSuperAdmin, async (req, res
     }
 });
 
-import jwt from 'jsonwebtoken';
-
 // Super Admin Control: Impersonate Member
 router.post('/impersonate/:id', authenticateToken, isSuperAdmin, async (req, res) => {
     try {
@@ -345,8 +352,6 @@ router.patch('/users/:id/password', authenticateToken, isSuperAdmin, async (req,
         res.status(500).json({ error: 'Failed to reset password' });
     }
 });
-
-import { validateAdminCreate } from '../middleware/validate.js';
 
 // Super Admin Control: Register Staff
 router.post('/register', authenticateToken, isSuperAdmin, validateAdminCreate, async (req, res) => {
@@ -702,6 +707,49 @@ router.put('/inventory/:id', authenticateToken, isAdmin, async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to update inventory' });
+    }
+});
+
+// ============================================
+// Admin Withdrawals Management
+// ============================================
+
+// Get all withdrawals (admin)
+router.get('/withdrawals', authenticateToken, isFinance, async (req, res) => {
+    try {
+        const { status, page = 1, limit = 20 } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const where = {};
+        if (status) {
+            where.status = status;
+        }
+
+        const [withdrawals, total] = await Promise.all([
+            prisma.withdrawal.findMany({
+                where,
+                skip,
+                take: parseInt(limit),
+                include: {
+                    user: { select: { id: true, firstName: true, lastName: true, email: true, referralCode: true } }
+                },
+                orderBy: { createdAt: 'desc' }
+            }),
+            prisma.withdrawal.count({ where })
+        ]);
+
+        res.json({
+            withdrawals,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch withdrawals' });
     }
 });
 

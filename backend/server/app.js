@@ -1,5 +1,8 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import xssClean from 'xss-clean';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -30,6 +33,27 @@ const envFile = process.env.NODE_ENV === 'test'
 dotenv.config({ path: path.resolve(__dirname, envFile) });
 
 const app = express();
+
+// 🛡️ Security Middleware
+app.use(helmet());
+app.use(xssClean());
+
+// Rate limiting configuration
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    message: { error: 'Too many requests, please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use('/api', limiter);
+
+// Strict rate limiting for auth endpoints
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // limit each IP to 10 requests per windowMs for auth endpoints
+    message: { error: 'Too many authentication attempts, please try again later.' },
+});
 
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json());

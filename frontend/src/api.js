@@ -37,8 +37,8 @@ api.interceptors.response.use(
 // Auth Endpoints
 // ============================================
 
-export const login = async (email, password) => {
-    const response = await api.post('/auth/login', { email, password });
+export const login = async (username, password) => {
+    const response = await api.post('/auth/login', { username, password });
     return response.data;
 };
 
@@ -272,8 +272,8 @@ export const getUnreadNotificationCount = async () => {
 // ============================================
 
 // Admin Auth
-export const adminLogin = async (email, password) => {
-    const response = await api.post('/admin/login', { email, password });
+export const adminLogin = async (username, password) => {
+    const response = await api.post('/admin/login', { username, password });
     return response.data;
 };
 

@@ -132,4 +132,31 @@ router.get('/tiers/list', async (req, res) => {
     }
 });
 
+// POST /packages/select - Select/upgrade tier
+router.post('/select', authenticateToken, async (req, res) => {
+    try {
+        const { tierId } = req.body;
+        const userId = req.user.userId;
+
+        const tier = await prisma.tier.findUnique({
+            where: { id: parseInt(tierId) }
+        });
+
+        if (!tier) {
+            return res.status(404).json({ error: 'Tier not found' });
+        }
+
+        // Update user's tier
+        await prisma.user.update({
+            where: { id: userId },
+            data: { tierId: tier.id }
+        });
+
+        res.json({ message: `Successfully selected ${tier.name} tier`, tier });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to select tier' });
+    }
+});
+
 export default router;

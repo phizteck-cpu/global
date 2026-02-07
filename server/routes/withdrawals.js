@@ -153,4 +153,46 @@ router.post('/approve/:id', authenticateToken, isFinance, async (req, res) => {
     }
 });
 
+// POST /withdrawals/reject/:id - Reject Withdrawal
+router.post('/reject/:id', authenticateToken, isFinance, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason } = req.body;
+        const adminId = req.user.userId;
+
+        const withdrawal = await prisma.withdrawal.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!withdrawal || withdrawal.status !== 'PENDING') {
+            return res.status(400).json({ error: 'Invalid or non-pending withdrawal request' });
+        }
+
+        // Reject the withdrawal - no funds deducted
+        const updatedWithdrawal = await prisma.withdrawal.update({
+            where: { id: parseInt(id) },
+            data: {
+                status: 'REJECTED',
+                adminId,
+                processedAt: new Date()
+            }
+        });
+
+        // Create audit log
+        await prisma.auditLog.create({
+            data: {
+                adminId,
+                action: 'WITHDRAWAL_REJECTION',
+                details: `Rejected withdrawal ${id}: ${reason || 'No reason provided'}`,
+                targetUserId: withdrawal.userId
+            }
+        });
+
+        res.json({ message: 'Withdrawal rejected', data: updatedWithdrawal });
+    } catch (error) {
+        console.error(error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
 export default router;

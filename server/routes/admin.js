@@ -1,9 +1,73 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import prisma from '../prisma/client.js';
 import { authenticateToken, isSuperAdmin, isAdmin, isFinance, isOps, anyAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// ============================================
+// Admin Login (uses same auth as members)
+// ============================================
+router.post('/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        if (!username || !password) {
+            return res.status(400).json({ message: 'Username and password are required' });
+        }
+
+        const user = await prisma.user.findFirst({
+            where: {
+                username: username.trim(),
+                role: { in: ['ADMIN', 'SUPERADMIN', 'FINANCE_ADMIN', 'OPS_ADMIN', 'SUPPORT_ADMIN', 'ACCOUNTANT'] }
+            }
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid username or password' });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Invalid username or password' });
+        }
+
+        // Generate tokens
+        const accessToken = jwt.sign(
+            { userId: user.id, role: user.role, email: user.email },
+            process.env.JWT_SECRET || 'secret_key',
+            { expiresIn: '15m' }
+        );
+
+        const refreshToken = jwt.sign(
+            { userId: user.id, type: 'refresh' },
+            process.env.JWT_REFRESH_SECRET || 'refresh_secret_key',
+            { expiresIn: '7d' }
+        );
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { refreshToken }
+        });
+
+        res.json({
+            accessToken,
+            refreshToken,
+            user: {
+                id: user.id,
+                email: user.email,
+                username: user.username,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
 
 // Admin Stats
 router.get('/stats', authenticateToken, anyAdmin, async (req, res) => {
@@ -226,7 +290,7 @@ router.patch('/users/:id/tier', authenticateToken, isSuperAdmin, async (req, res
     }
 });
 
-import jwt from 'jsonwebtoken';
+
 
 // Super Admin Control: Impersonate Member
 router.post('/impersonate/:id', authenticateToken, isSuperAdmin, async (req, res) => {
@@ -415,6 +479,293 @@ router.put('/company-settings', authenticateToken, isSuperAdmin, async (req, res
         console.error(error);
         res.status(500).json({ error: 'Failed to update company settings' });
     }
+});
+
+// ============================================
+// Admin Approvals (User Approvals)
+// ============================================
+router.get('/approvals', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const pendingUsers = await prisma.user.findMany({
+            where: {
+                status: 'PENDING_KYC'
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json(pendingUsers);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch pending approvals' });
+    }
+});
+
+router.post('/approvals/:id/approve', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = await prisma.user.update({
+            where: { id: parseInt(id) },
+            data: {
+                status: 'ACTIVE',
+                kycStatus: 'VERIFIED'
+            }
+        });
+
+        await prisma.auditLog.create({
+            data: {
+                adminId: req.user.id,
+                action: 'USER_APPROVAL',
+                details: `Approved user ${id}`,
+                targetUserId: parseInt(id)
+            }
+        });
+
+        res.json({ message: 'User approved successfully', user });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to approve user' });
+    }
+});
+
+router.post('/approvals/:id/reject', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason } = req.body;
+        const user = await prisma.user.update({
+            where: { id: parseInt(id) },
+            data: {
+                status: 'SUSPENDED',
+                kycStatus: 'REJECTED'
+            }
+        });
+
+        await prisma.auditLog.create({
+            data: {
+                adminId: req.user.id,
+                action: 'USER_REJECTION',
+                details: `Rejected user ${id}: ${reason || 'No reason provided'}`,
+                targetUserId: parseInt(id)
+            }
+        });
+
+        res.json({ message: 'User rejected', user });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to reject user' });
+    }
+});
+
+// ============================================
+// Admin Withdrawals
+// ============================================
+router.get('/withdrawals', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const withdrawals = await prisma.withdrawal.findMany({
+            orderBy: { createdAt: 'desc' },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true
+                    }
+                }
+            }
+        });
+        res.json(withdrawals);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch withdrawals' });
+    }
+});
+
+router.post('/withdrawals/:id/:action', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const { id, action } = req.params;
+        const { reason } = req.body;
+
+        if (!['approve', 'reject'].includes(action)) {
+            return res.status(400).json({ error: 'Invalid action' });
+        }
+
+        const withdrawal = await prisma.withdrawal.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!withdrawal) {
+            return res.status(404).json({ error: 'Withdrawal not found' });
+        }
+
+        if (action === 'approve') {
+            // Credit the user's wallet balance (from frozen contribution balance)
+            await prisma.$transaction(async (tx) => {
+                await tx.user.update({
+                    where: { id: withdrawal.userId },
+                    data: {
+                        contributionBalance: { decrement: withdrawal.amount }
+                    }
+                });
+
+                await tx.withdrawal.update({
+                    where: { id: parseInt(id) },
+                    data: {
+                        status: 'APPROVED',
+                        adminId: req.user.id,
+                        processedAt: new Date()
+                    }
+                });
+
+                await tx.transaction.create({
+                    data: {
+                        userId: withdrawal.userId,
+                        amount: withdrawal.amount,
+                        type: 'WITHDRAWAL',
+                        ledgerType: 'COOPERATIVE',
+                        direction: 'OUT',
+                        status: 'SUCCESS',
+                        description: `Approved withdrawal: ${reason || 'Approved by admin'}`,
+                        reference: `WD-APP-${id}-${Date.now()}`
+                    }
+                });
+            });
+
+            await prisma.auditLog.create({
+                data: {
+                    adminId: req.user.id,
+                    action: 'WITHDRAWAL_APPROVAL',
+                    details: `Approved withdrawal ${id}: ${reason || 'No reason'}`,
+                    targetUserId: withdrawal.userId
+                }
+            });
+
+            res.json({ message: 'Withdrawal approved' });
+        } else {
+            // Reject - return funds to contribution balance
+            await prisma.$transaction(async (tx) => {
+                await tx.withdrawal.update({
+                    where: { id: parseInt(id) },
+                    data: {
+                        status: 'REJECTED',
+                        adminId: req.user.id,
+                        processedAt: new Date()
+                    }
+                });
+
+                await tx.transaction.create({
+                    data: {
+                        userId: withdrawal.userId,
+                        amount: withdrawal.amount,
+                        type: 'WITHDRAWAL_REJECT',
+                        ledgerType: 'COOPERATIVE',
+                        direction: 'IN',
+                        status: 'SUCCESS',
+                        description: `Withdrawal rejected: ${reason || 'Rejected by admin'}`,
+                        reference: `WD-REJ-${id}-${Date.now()}`
+                    }
+                });
+            });
+
+            await prisma.auditLog.create({
+                data: {
+                    adminId: req.user.id,
+                    action: 'WITHDRAWAL_REJECTION',
+                    details: `Rejected withdrawal ${id}: ${reason || 'No reason'}`,
+                    targetUserId: withdrawal.userId
+                }
+            });
+
+            res.json({ message: 'Withdrawal rejected' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to process withdrawal' });
+    }
+});
+
+// ============================================
+// Admin Packages
+// ============================================
+router.get('/packages', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const packages = await prisma.package.findMany({
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json(packages);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch packages' });
+    }
+});
+
+router.post('/packages', authenticateToken, isSuperAdmin, async (req, res) => {
+    try {
+        const { name, description, price, bvValue, durationWeeks, maxQuantity, isActive, imageUrl } = req.body;
+        const newPackage = await prisma.package.create({
+            data: {
+                name,
+                description,
+                price: parseFloat(price),
+                bvValue: parseFloat(bvValue) || 0,
+                durationWeeks: parseInt(durationWeeks) || 0,
+                maxQuantity: maxQuantity ? parseInt(maxQuantity) : null,
+                isActive: isActive !== false,
+                imageUrl
+            }
+        });
+        res.json({ message: 'Package created', package: newPackage });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to create package' });
+    }
+});
+
+router.put('/packages/:id', authenticateToken, isSuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, description, price, bvValue, durationWeeks, maxQuantity, isActive, imageUrl } = req.body;
+        const updatedPackage = await prisma.package.update({
+            where: { id: parseInt(id) },
+            data: {
+                name,
+                description,
+                price: parseFloat(price),
+                bvValue: parseFloat(bvValue) || 0,
+                durationWeeks: parseInt(durationWeeks) || 0,
+                maxQuantity: maxQuantity ? parseInt(maxQuantity) : null,
+                isActive: isActive !== false,
+                imageUrl
+            }
+        });
+        res.json({ message: 'Package updated', package: updatedPackage });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to update package' });
+    }
+});
+
+router.delete('/packages/:id', authenticateToken, isSuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        await prisma.package.delete({ where: { id: parseInt(id) } });
+        res.json({ message: 'Package deleted' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to delete package' });
+    }
+});
+
+// ============================================
+// Admin Inventory
+// ============================================
+router.get('/inventory', authenticateToken, anyAdmin, async (req, res) => {
+    // This is a placeholder - implement based on your inventory model
+    res.json({ message: 'Inventory endpoint placeholder', items: [] });
+});
+
+router.put('/inventory/:id', authenticateToken, anyAdmin, async (req, res) => {
+    // This is a placeholder - implement based on your inventory model
+    res.json({ message: 'Inventory update endpoint placeholder' });
 });
 
 export default router;

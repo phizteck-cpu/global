@@ -30,4 +30,4 @@ RUN cd server && npx prisma generate
 EXPOSE 5000
 
 # Run database migration and start server
-CMD ["sh", "-c", "npx prisma migrate deploy && node server/index.js"]
+CMD ["node", "server/index.js"]

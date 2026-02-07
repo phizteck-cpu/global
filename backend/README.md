@@ -14,6 +14,12 @@ Copy `.env.example` to `.env` and fill in your database credentials:
 cp .env.example .env
 ```
 
+Required environment variables:
+- `DATABASE_URL` - MySQL connection string (e.g., mysql://user:password@localhost:3306/valuehills)
+- `JWT_SECRET` - Secret key for JWT tokens
+- `PORT` - Server port (default: 3000)
+- `NODE_ENV` - Environment (development/production/test)
+
 ### 3. Setup Database
 **Option A: Using Prisma with MySQL**
 ```bash
@@ -30,6 +36,45 @@ npm run dev
 ```
 
 The server will run on http://localhost:3000
+
+## Docker Deployment
+
+### Build and Run with Docker Compose
+```bash
+docker-compose up -d --build
+```
+
+This will start:
+- MySQL database on port 3306
+- Backend API on port 3000
+- phpMyAdmin on port 8080
+
+### Environment Variables for Docker
+Create a `.env` file in the root directory:
+```env
+MYSQL_ROOT_PASSWORD=your_secure_password
+MYSQL_DATABASE=valuehills
+MYSQL_USER=valuehills_user
+MYSQL_PASSWORD=your_secure_password
+BACKEND_PORT=3000
+PHPMYADMIN_PORT=8080
+```
+
+## Production Deployment
+
+### Using Docker
+```bash
+docker build -t valuehills-backend .
+docker run -d -p 3000:3000 --env-file .env.production valuehills-backend
+```
+
+### Environment Variables for Production
+```env
+DATABASE_URL=mysql://user:password@hostname:3306/valuehills
+JWT_SECRET=your-very-secure-random-string
+PORT=3000
+NODE_ENV=production
+```
 
 ## API Endpoints
 
@@ -92,10 +137,10 @@ The server will run on http://localhost:3000
 - `GET /api/admin/withdrawals` - Manage withdrawals
 - `GET /api/admin/audit` - View audit logs
 
-## Environment Variables
+## Testing
+```bash
+npm test
+```
 
-| Variable | Description |
-|----------|-------------|
-| DATABASE_URL | MySQL connection string |
-| JWT_SECRET | Secret for JWT tokens |
-| PORT | Server port (default: 3000) |
+## License
+MIT
