@@ -41,6 +41,42 @@ npm install
 npm run start
 ```
 
+## Frontend Deployment to valuehills.shop
+
+The frontend build is in `frontend/dist/` after running `npm run build`.
+
+### Uploading to cPanel/Hostinger
+
+1. **Build the frontend:**
+   ```bash
+   cd frontend
+   npm install
+   npm run build
+   ```
+
+2. **Configure API URL:**
+   - Edit `frontend/.env.production` and set:
+     ```
+     VITE_API_URL=https://api.valuehills.shop
+     ```
+   - Rebuild after changing
+
+3. **Upload to Hostinger:**
+   - Compress the `frontend/dist/` folder to `dist.zip`
+   - Upload to `public_html/` in Hostinger File Manager
+   - Extract the zip file
+   - The site will be available at https://valuehills.shop
+
+### Configuring API on Hostinger
+
+1. **Upload Backend:**
+   - Upload the `server/` folder to your hosting
+   - Configure environment variables in `.env.production`
+
+2. **Point API to your backend:**
+   - Ensure `VITE_API_URL=https://api.valuehills.shop` is set
+   - Configure your hosting to route `/api/*` requests to the backend
+
 ## Environment Configuration
 
 ### Production Environment Variables
@@ -63,7 +99,7 @@ PAYSTACK_SECRET=sk_live_your_secret_key
 PAYSTACK_PUBLIC=pk_live_your_public_key
 
 # Frontend URL (for CORS)
-FRONTEND_URL=https://your-domain.com
+FRONTEND_URL=https://valuehills.shop
 ```
 
 ## Production Checklist
@@ -71,7 +107,7 @@ FRONTEND_URL=https://your-domain.com
 - [ ] Set strong `JWT_SECRET` environment variable
 - [ ] Configure `DATABASE_URL` with production MySQL credentials
 - [ ] Update Paystack keys from test to live mode
-- [ ] Set `FRONTEND_URL` to your frontend domain
+- [ ] Set `FRONTING_URL` to your frontend domain
 - [ ] Run database migrations: `npx prisma migrate deploy`
 - [ ] Seed initial data if needed: `npm run seed`
 
@@ -143,4 +179,22 @@ docker-compose exec app npx prisma studio
 ```bash
 docker-compose down -v
 docker-compose up -d
+```
+
+## Project Structure
+
+```
+global/
+├── frontend/          # React frontend
+│   ├── src/          # Source code
+│   ├── dist/         # Production build
+│   └── .env.production  # Production env vars
+├── server/           # Express backend
+│   ├── routes/      # API routes
+│   ├── prisma/       # Database schema & migrations
+│   └── .env.production  # Production env vars
+├── dist/             # Copied frontend build for server
+├── Dockerfile        # Docker build config
+├── docker-compose.yml # Docker services config
+└── DEPLOYMENT.md    # This file
 ```
