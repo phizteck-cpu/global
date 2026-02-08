@@ -125,18 +125,7 @@ app.use((req, res, next) => {
     const fileExists = fs.existsSync(possibleFilePath) && fs.statSync(possibleFilePath).isFile();
     console.log(`[SPA DEBUG] possibleFilePath: ${possibleFilePath}, exists: ${fileExists}`);
     
-    // Don't serve SPA for root path, just show API info
-    if (req.path === '/' || req.originalUrl === '/') {
-        return res.status(200).json({
-            message: 'Valuehills API Server',
-            version: '1.0.0',
-            status: 'running',
-            endpoints: '/api/*',
-            health: '/api/health'
-        });
-    }
-    
-    // Serve the React app for other SPA routes
+    // Serve the React app for root path and all other routes
     if (indexExists) {
         console.log(`[SPA DEBUG] Serving index.html for ${req.url}`);
         res.sendFile(indexPath, (err) => {
