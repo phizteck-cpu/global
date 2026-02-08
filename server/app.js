@@ -93,8 +93,8 @@ app.use('/api', apiRouter);
 const distPath = path.resolve(__dirname, '../dist');
 const indexPath = path.join(distPath, 'index.html');
 
-// 3. Serve Static Assets
-app.use(express.static(distPath));
+// 3. Serve Static Assets (excluding index.html)
+app.use(express.static(distPath, { index: false }));
 
 // 4. Fallback API Mount (for proxies stripping /api)
 const apiPaths = ['/auth', '/users', '/wallet', '/packages', '/contributions', '/referrals', '/bonuses', '/notifications', '/withdrawals', '/redemptions', '/admin', '/dashboard', '/health'];
@@ -125,7 +125,18 @@ app.use((req, res, next) => {
     const fileExists = fs.existsSync(possibleFilePath) && fs.statSync(possibleFilePath).isFile();
     console.log(`[SPA DEBUG] possibleFilePath: ${possibleFilePath}, exists: ${fileExists}`);
     
-    // Otherwise serve the React app
+    // Don't serve SPA for root path, just show API info
+    if (req.path === '/' || req.originalUrl === '/') {
+        return res.status(200).json({
+            message: 'Valuehills API Server',
+            version: '1.0.0',
+            status: 'running',
+            endpoints: '/api/*',
+            health: '/api/health'
+        });
+    }
+    
+    // Serve the React app for other SPA routes
     if (indexExists) {
         console.log(`[SPA DEBUG] Serving index.html for ${req.url}`);
         res.sendFile(indexPath, (err) => {
