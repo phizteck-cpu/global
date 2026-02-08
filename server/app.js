@@ -90,8 +90,31 @@ apiRouter.get('/debug/paths', (req, res) => {
 app.use('/api', apiRouter);
 
 // 2. Resolve Static Path
-const distPath = path.resolve(__dirname, '../dist');
-const indexPath = path.join(distPath, 'index.html');
+// Check multiple locations for the frontend build
+const possiblePaths = [
+    path.resolve(__dirname, '../dist'),                    // ../dist from server/
+    path.resolve(__dirname, '../../dist'),                 // ../../dist from server/services/
+    path.resolve(__dirname, 'dist'),                      // dist/ in server folder
+];
+
+let distPath = null;
+let indexPath = null;
+
+for (const p of possiblePaths) {
+    const testIndex = path.join(p, 'index.html');
+    if (fs.existsSync(testIndex)) {
+        distPath = p;
+        indexPath = testIndex;
+        console.log(`[SPA] Found frontend build at: ${distPath}`);
+        break;
+    }
+}
+
+if (!distPath) {
+    console.error('[SPA ERROR] Frontend build not found!');
+    console.error('[SPA ERROR] Searched in:');
+    possiblePaths.forEach(p => console.error(`[SPA ERROR]   - ${p}`));
+}
 
 // 3. Serve Static Assets (excluding index.html)
 app.use(express.static(distPath, { index: false }));
