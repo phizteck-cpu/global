@@ -20,10 +20,10 @@ docker-compose logs -f
 
 **Services:**
 - MySQL (port 3306)
-- App Server (port 5000)
+- App Server (port 5000) - serves both frontend and API
 - phpMyAdmin (port 8080)
 
-### Option 2: Build and Run Manually
+### Option 2: Build and Deploy Manually
 
 ```bash
 # Clone the repository
@@ -35,53 +35,47 @@ cd frontend
 npm install
 npm run build
 
-# Start backend
+# Copy frontend build to server
+xcopy /E /Y dist ..\server\dist
+
+# Deploy backend
 cd ../server
 npm install
 npm run start
 ```
 
-## Frontend Deployment to valuehills.shop
+## Combined Frontend + Backend Deployment
 
-The frontend build is in `frontend/dist/` after running `npm run build`.
+The Express server is configured to serve:
+- **Frontend SPA** at `/` (root)
+- **Backend API** at `/api/*`
 
-### Uploading to cPanel/Hostinger
+### To Deploy on VPS:
 
-1. **Build the frontend:**
+1. **Build and copy frontend:**
    ```bash
    cd frontend
    npm install
    npm run build
+   xcopy /E /Y dist ..\server\dist
    ```
 
-2. **Configure API URL:**
-   - Edit `frontend/.env.production` and set:
-     ```
-     VITE_API_URL=https://api.valuehills.shop
-     ```
-   - Rebuild after changing
+2. **Upload to server:**
+   - Upload the `server/` folder to your VPS
+   - Configure `.env.production` with database and JWT settings
 
-3. **Upload to Hostinger:**
-   - Compress the `frontend/dist/` folder to `dist.zip`
-   - Upload to `public_html/` in Hostinger File Manager
-   - Extract the zip file
-   - The site will be available at https://valuehills.shop
-
-### Configuring API on Hostinger
-
-1. **Upload Backend:**
-   - Upload the `server/` folder to your hosting
-   - Configure environment variables in `.env.production`
-
-2. **Point API to your backend:**
-   - Ensure `VITE_API_URL=https://api.valuehills.shop` is set
-   - Configure your hosting to route `/api/*` requests to the backend
+3. **Start the server:**
+   ```bash
+   cd server
+   npm install
+   npm run start
+   ```
 
 ## Environment Configuration
 
 ### Production Environment Variables
 
-Create a `.env.production` file in the `server/` directory:
+Create `.env.production` in the `server/` directory:
 
 ```env
 # Server Configuration
@@ -107,7 +101,7 @@ FRONTEND_URL=https://valuehills.shop
 - [ ] Set strong `JWT_SECRET` environment variable
 - [ ] Configure `DATABASE_URL` with production MySQL credentials
 - [ ] Update Paystack keys from test to live mode
-- [ ] Set `FRONTING_URL` to your frontend domain
+- [ ] Set `FRONTEND_URL` to your frontend domain
 - [ ] Run database migrations: `npx prisma migrate deploy`
 - [ ] Seed initial data if needed: `npm run seed`
 
@@ -118,39 +112,58 @@ FRONTEND_URL=https://valuehills.shop
    ssh user@your-vps-ip
    ```
 
-2. **Install Docker**
+2. **Install Node.js and npm**
    ```bash
    sudo apt update
-   sudo apt install docker.io docker-compose
-   sudo systemctl start docker
-   sudo systemctl enable docker
+   sudo apt install nodejs npm
    ```
 
 3. **Clone and Deploy**
    ```bash
    git clone https://github.com/phizteck-cpu/global.git
-   cd global
-   docker-compose up -d
+   cd global/server
+   npm install
+   npx prisma generate
+   # Create .env.production with your settings
+   npm run start
    ```
 
-4. **Configure Firewall**
+4. **Use PM2 for production**
    ```bash
-   sudo ufw allow 80/tcp
-   sudo ufw allow 443/tcp
-   sudo ufw allow 5000/tcp
-   sudo ufw enable
+   sudo npm install -g pm2
+   pm2 start index.js
+   pm2 save
+   pm2 startup
    ```
 
-5. **Setup Reverse Proxy (Nginx)**
-   - Install Nginx: `sudo apt install nginx`
+5. **Configure Reverse Proxy (Nginx)**
+   - Install Nginx
    - Configure SSL with Let's Encrypt
    - Proxy requests to localhost:5000
 
 ## Monitoring
 
 - **Health Check:** `http://your-domain.com/api/health`
-- **Logs:** `docker-compose logs -f app`
-- **Database:** Access via phpMyAdmin at `http://your-domain.com:8080`
+- **Logs:** Check PM2 or terminal output
+- **Database:** Access via phpMyAdmin or direct MySQL connection
+
+## Project Structure
+
+```
+global/
+├── frontend/          # React frontend
+│   ├── src/          # Source code
+│   ├── dist/         # Production build
+│   └── .env.production
+├── server/           # Express backend + frontend build
+│   ├── routes/       # API routes
+│   ├── prisma/       # Database schema & migrations
+│   ├── dist/         # Frontend build (copied here)
+│   └── .env.production
+├── Dockerfile        # Docker build config
+├── docker-compose.yml
+└── DEPLOYMENT.md
+```
 
 ## Troubleshooting
 
@@ -168,10 +181,11 @@ docker-compose restart mysql
 
 ```bash
 # Deploy pending migrations
-docker-compose exec app npx prisma migrate deploy
+cd server
+npx prisma migrate deploy
 
 # View database in Prisma Studio
-docker-compose exec app npx prisma studio
+npx prisma studio
 ```
 
 ### Reset Database (Development Only)
@@ -179,22 +193,4 @@ docker-compose exec app npx prisma studio
 ```bash
 docker-compose down -v
 docker-compose up -d
-```
-
-## Project Structure
-
-```
-global/
-├── frontend/          # React frontend
-│   ├── src/          # Source code
-│   ├── dist/         # Production build
-│   └── .env.production  # Production env vars
-├── server/           # Express backend
-│   ├── routes/      # API routes
-│   ├── prisma/       # Database schema & migrations
-│   └── .env.production  # Production env vars
-├── dist/             # Copied frontend build for server
-├── Dockerfile        # Docker build config
-├── docker-compose.yml # Docker services config
-└── DEPLOYMENT.md    # This file
 ```

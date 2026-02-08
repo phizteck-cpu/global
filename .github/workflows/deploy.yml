@@ -18,7 +18,18 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
+      - name: Build Frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Copy Frontend Build to Server
+        run: |
+          mkdir -p server/dist
+          cp -r frontend/dist/* server/dist/
+
+      - name: Install Backend Dependencies
         run: |
           cd server
           npm ci
@@ -39,6 +50,7 @@ jobs:
             cd /home/admin/web/domains/valuehills.shop/public_html/api
             git pull origin main
             npm ci
+            npx prisma generate
             npx prisma migrate deploy
             pm2 restart all || node index.js
             echo "Deployment completed successfully"
