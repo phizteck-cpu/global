@@ -1,196 +1,116 @@
 # ValueHills Deployment Guide
 
-This guide covers deployment options for the ValueHills platform.
+## Quick Deploy to Hostinger
 
-## Quick Deploy Options
-
-### Option 1: Docker Compose (Recommended for VPS/Dedicated Server)
+### Step 1: Build Frontend Locally
 
 ```bash
-# Clone the repository
-git clone https://github.com/phizteck-cpu/global.git
-cd global
-
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-```
-
-**Services:**
-- MySQL (port 3306)
-- App Server (port 5000) - serves both frontend and API
-- phpMyAdmin (port 8080)
-
-### Option 2: Build and Deploy Manually
-
-```bash
-# Clone the repository
-git clone https://github.com/phizteck-cpu/global.git
-cd global
-
-# Build frontend
 cd frontend
 npm install
 npm run build
-
-# Copy frontend build to server
-xcopy /E /Y dist ..\server\dist
-
-# Deploy backend
-cd ../server
-npm install
-npm run start
 ```
 
-## Combined Frontend + Backend Deployment
+### Step 2: Upload to Server
 
-The Express server is configured to serve:
-- **Frontend SPA** at `/` (root)
-- **Backend API** at `/api/*`
+**Upload the following structure to your Hostinger:**
 
-### To Deploy on VPS:
+```
+public_html/
+├── dist/                    # Frontend build (from frontend/dist/)
+│   ├── index.html
+│   └── assets/
+└── api/                    # Backend
+    ├── index.js
+    ├── app.js
+    ├── package.json
+    ├── prisma/
+    └── .env.production     # With production settings
+```
 
-1. **Build and copy frontend:**
-   ```bash
-   cd frontend
-   npm install
-   npm run build
-   xcopy /E /Y dist ..\server\dist
-   ```
+**Via Git (Recommended):**
+```bash
+# On your server
+cd /home/admin/web/domains/valuehills.shop/public_html/api
+git clone https://github.com/phizteck-cpu/global.git .
+npm install
+npx prisma generate
+```
 
-2. **Upload to server:**
-   - Upload the `server/` folder to your VPS
-   - Configure `.env.production` with database and JWT settings
+### Step 3: Configure Environment
 
-3. **Start the server:**
-   ```bash
-   cd server
-   npm install
-   npm run start
-   ```
-
-## Environment Configuration
-
-### Production Environment Variables
-
-Create `.env.production` in the `server/` directory:
+Create `api/.env.production`:
 
 ```env
-# Server Configuration
 PORT=5000
 NODE_ENV=production
-
-# JWT Secret (generate a secure random string)
 JWT_SECRET=your-secure-jwt-secret-key
-
-# Database Configuration (MySQL)
-DATABASE_URL=mysql://username:password@host:3306/database
-
-# Paystack Configuration (from https://dashboard.paystack.com)
-PAYSTACK_SECRET=sk_live_your_secret_key
-PAYSTACK_PUBLIC=pk_live_your_public_key
-
-# Frontend URL (for CORS)
+DATABASE_URL=mysql://user:pass@localhost:3306/your_database
+PAYSTACK_SECRET=sk_live_xxx
+PAYSTACK_PUBLIC=pk_live_xxx
 FRONTEND_URL=https://valuehills.shop
 ```
 
-## Production Checklist
+### Step 4: Run Database Migrations
 
-- [ ] Set strong `JWT_SECRET` environment variable
-- [ ] Configure `DATABASE_URL` with production MySQL credentials
-- [ ] Update Paystack keys from test to live mode
-- [ ] Set `FRONTEND_URL` to your frontend domain
-- [ ] Run database migrations: `npx prisma migrate deploy`
-- [ ] Seed initial data if needed: `npm run seed`
-
-## Deploying to Hostinger VPS
-
-1. **Connect to VPS via SSH**
-   ```bash
-   ssh user@your-vps-ip
-   ```
-
-2. **Install Node.js and npm**
-   ```bash
-   sudo apt update
-   sudo apt install nodejs npm
-   ```
-
-3. **Clone and Deploy**
-   ```bash
-   git clone https://github.com/phizteck-cpu/global.git
-   cd global/server
-   npm install
-   npx prisma generate
-   # Create .env.production with your settings
-   npm run start
-   ```
-
-4. **Use PM2 for production**
-   ```bash
-   sudo npm install -g pm2
-   pm2 start index.js
-   pm2 save
-   pm2 startup
-   ```
-
-5. **Configure Reverse Proxy (Nginx)**
-   - Install Nginx
-   - Configure SSL with Let's Encrypt
-   - Proxy requests to localhost:5000
-
-## Monitoring
-
-- **Health Check:** `http://your-domain.com/api/health`
-- **Logs:** Check PM2 or terminal output
-- **Database:** Access via phpMyAdmin or direct MySQL connection
-
-## Project Structure
-
+```bash
+cd api
+npx prisma migrate deploy
 ```
-global/
-├── frontend/          # React frontend
-│   ├── src/          # Source code
-│   ├── dist/         # Production build
-│   └── .env.production
-├── server/           # Express backend + frontend build
-│   ├── routes/       # API routes
-│   ├── prisma/       # Database schema & migrations
-│   ├── dist/         # Frontend build (copied here)
-│   └── .env.production
-├── Dockerfile        # Docker build config
-├── docker-compose.yml
-└── DEPLOYMENT.md
+
+### Step 5: Start the Server
+
+```bash
+cd api
+npm install -g pm2
+pm2 start index.js
+pm2 save
+pm2 startup
+```
+
+### Step 6: Configure Reverse Proxy (Nginx)
+
+In Hostinger's "Advanced > Nginx Configuration":
+
+```nginx
+server {
+    listen 80;
+    server_name valuehills.shop www.valuehills.shop;
+
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+## Testing Locally
+
+```bash
+# Terminal 1 - Backend
+cd server
+npm start
+# Server runs on http://localhost:5000
+# - Frontend: http://localhost:5000/
+# - API: http://localhost:5000/api/health
 ```
 
 ## Troubleshooting
 
-### Database Connection Issues
+### Frontend not showing
+- Ensure `dist/index.html` exists and is readable
+- Check server logs for path resolution messages
 
-```bash
-# Check MySQL status
-docker-compose logs mysql
+### Database connection failed
+- Verify `DATABASE_URL` is correct
+- Ensure MySQL is running and accessible
 
-# Restart MySQL
-docker-compose restart mysql
-```
-
-### Prisma Migrations
-
-```bash
-# Deploy pending migrations
-cd server
-npx prisma migrate deploy
-
-# View database in Prisma Studio
-npx prisma studio
-```
-
-### Reset Database (Development Only)
-
-```bash
-docker-compose down -v
-docker-compose up -d
-```
+### Port 5000 not accessible
+- Hostinger may block custom ports
+- Use reverse proxy (Nginx) to forward port 80 to 5000
