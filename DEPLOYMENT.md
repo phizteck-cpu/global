@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ValueHills Deployment Guide
 
 ## Quick Deploy to Hostinger
@@ -114,3 +115,71 @@ npm start
 ### Port 5000 not accessible
 - Hostinger may block custom ports
 - Use reverse proxy (Nginx) to forward port 80 to 5000
+=======
+# Deployment Guide - ValueHills Platform
+
+This guide outlines the steps to deploy the ValueHills platform to a production environment.
+
+## 1. Prerequisites
+- Node.js v20+
+- MySQL Database (e.g., Hostinger, AWS RDS, DigitalOcean Managed DB)
+- Docker (optional, but recommended)
+
+## 2. Environment Variables
+Ensure you have a `.env.production` file in the `backend/` directory with the following variables:
+- `DATABASE_URL`: Your production MySQL connection string.
+- `JWT_SECRET`: A long, random string.
+- `PORT`: Usually `5000`.
+- `NODE_ENV`: Set to `production`.
+- `PAYSTACK_SECRET`: Your Paystack secret key.
+- `PAYSTACK_PUBLIC`: Your Paystack public key.
+- `FRONTEND_URL`: The URL where your app will be hosted.
+
+## 3. Deployment Options
+
+### Option A: Docker (Recommended)
+You can use the provided `Dockerfile` in the root directory to build and run the entire application.
+
+```bash
+# Build the image
+docker build -t valuehills-platform .
+
+# Run the container
+docker run -p 5000:5000 --env-file backend/.env.production valuehills-platform
+```
+
+### Option B: Manual Deployment
+1. **Build Frontend**:
+   ```bash
+   npm install
+   npm run build
+   ```
+2. **Setup Backend**:
+   - Ensure `frontend/dist` exists.
+   - Move/Copy `frontend/dist` to `backend/dist`.
+   ```bash
+   cd backend
+   npm install --omit=dev
+   npx prisma generate
+   ```
+3. **Run Migrations**:
+   ```bash
+   npx prisma migrate deploy
+   ```
+4. **Start Server**:
+   ```bash
+   NODE_ENV=production node index.js
+   ```
+
+## 4. Production Considerations
+- **SSL**: Ensure your frontend and backend are served over HTTPS.
+- **Database Backups**: Schedule regular backups of your MySQL database.
+- **Monitoring**: Use tools like PM2 or a cloud-native monitoring service to keep the process running.
+- **Rate Limiting**: The app includes basic rate limiting, ensure it's configured appropriately for your traffic.
+
+## 5. Troubleshooting
+If the frontend doesn't load:
+- Check that `backend/dist/index.html` exists.
+- Check the console logs for "Found frontend build at...".
+- Ensure `NODE_ENV` is set to `production` in your environment.
+>>>>>>> 13d4422 (Initial commit for production deployment)
