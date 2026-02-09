@@ -49,4 +49,39 @@ router.post('/', authenticateToken, anyAdmin, async (req, res) => {
     }
 });
 
+// PUT /inventory/:id - Update inventory item
+router.put('/:id', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, quantity, unit, priceEstimate } = req.body;
+        const pkg = await prisma.package.update({
+            where: { id: parseInt(id) },
+            data: {
+                name,
+                price: parseFloat(priceEstimate) || 0,
+                maxQuantity: parseInt(quantity) || 0,
+                description: `Unit: ${unit}`
+            }
+        });
+        res.json(pkg);
+    } catch (error) {
+        console.error('Error updating inventory:', error);
+        res.status(500).json({ error: 'Failed to update item' });
+    }
+});
+
+// DELETE /inventory/:id - Remove item
+router.delete('/:id', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        await prisma.package.delete({
+            where: { id: parseInt(id) }
+        });
+        res.json({ message: 'Item removed from inventory' });
+    } catch (error) {
+        console.error('Error deleting inventory item:', error);
+        res.status(500).json({ error: 'Failed to delete item' });
+    }
+});
+
 export default router;

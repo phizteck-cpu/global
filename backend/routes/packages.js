@@ -173,4 +173,63 @@ router.post('/select', authenticateToken, async (req, res) => {
     }
 });
 
+// POST /packages/upgrade/:id - Upgrade to a specific tier
+router.post('/upgrade/:id', authenticateToken, async (req, res) => {
+    try {
+        const tierId = parseInt(req.params.id);
+        const userId = req.user.userId;
+
+        const [user, tier] = await Promise.all([
+            prisma.user.findUnique({ where: { id: userId } }),
+            prisma.tier.findUnique({ where: { id: tierId } })
+        ]);
+
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        if (!tier) return res.status(404).json({ error: 'Tier not found' });
+
+        const upgradeFee = tier.upgradeFee || 0;
+
+        if (user.walletBalance < upgradeFee) {
+            return res.status(400).json({ error: `Insufficient funds. Need ₦${upgradeFee.toLocaleString()}` });
+        }
+
+        await prisma.$transaction(async (tx) => {
+            // Deduct fee
+            if (upgradeFee > 0) {
+                await tx.user.update({
+                    where: { id: userId },
+                    data: {
+                        walletBalance: { decrement: upgradeFee },
+                        tierId: tier.id
+                    }
+                });
+
+                // Record transaction
+                await tx.transaction.create({
+                    data: {
+                        userId,
+                        amount: upgradeFee,
+                        type: 'UPGRADE',
+                        ledgerType: 'VIRTUAL',
+                        direction: 'OUT',
+                        status: 'SUCCESS',
+                        description: `Upgrade to ${tier.name}`,
+                        reference: `UPG-${userId}-${Date.now()}`
+                    }
+                });
+            } else {
+                await tx.user.update({
+                    where: { id: userId },
+                    data: { tierId: tier.id }
+                });
+            }
+        });
+
+        res.json({ message: 'Upgrade successful', tier });
+    } catch (error) {
+        console.error('Upgrade Error:', error);
+        res.status(500).json({ error: 'Failed to process upgrade' });
+    }
+});
+
 export default router;

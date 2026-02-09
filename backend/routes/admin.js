@@ -756,16 +756,56 @@ router.delete('/packages/:id', authenticateToken, isSuperAdmin, async (req, res)
 });
 
 // ============================================
-// Admin Inventory
+// Admin Redemptions (Benefit Fulfillment)
 // ============================================
-router.get('/inventory', authenticateToken, anyAdmin, async (req, res) => {
-    // This is a placeholder - implement based on your inventory model
-    res.json({ message: 'Inventory endpoint placeholder', items: [] });
+router.get('/redemptions', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const redemptions = await prisma.redemption.findMany({
+            include: {
+                user: { select: { id: true, firstName: true, lastName: true, email: true } },
+                package: { select: { id: true, name: true, price: true } }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        // Map to what AdminInventory.jsx expects
+        const mapped = redemptions.map(r => ({
+            id: r.id,
+            user: { fullName: `${r.user.firstName} ${r.user.lastName}` },
+            requestDate: r.createdAt,
+            status: r.status === 'PENDING' ? 'REQUESTED' : (r.status === 'COMPLETED' ? 'DELIVERED' : r.status),
+            deliveryAddress: r.adminNote || 'Contact member for logistics'
+        }));
+
+        res.json(mapped);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch redemptions' });
+    }
 });
 
-router.put('/inventory/:id', authenticateToken, anyAdmin, async (req, res) => {
-    // This is a placeholder - implement based on your inventory model
-    res.json({ message: 'Inventory update endpoint placeholder' });
+router.post('/redemptions/:id/status', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        // Map status back if needed
+        let dbStatus = status;
+        if (status === 'DELIVERED') dbStatus = 'COMPLETED';
+        if (status === 'REQUESTED') dbStatus = 'PENDING';
+
+        const updated = await prisma.redemption.update({
+            where: { id: parseInt(id) },
+            data: {
+                status: dbStatus,
+                processedAt: new Date()
+            }
+        });
+        res.json(updated);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to update redemption status' });
+    }
 });
 
 export default router;
