@@ -13,6 +13,7 @@
         "postinstall": "prisma generate --schema=backend/prisma/schema.prisma"
     },
     "dependencies": {
+        "@emotion/is-prop-valid": "^1.4.0",
         "@prisma/client": "^5.21.1",
         "@vitejs/plugin-react": "^4.2.1",
         "autoprefixer": "^10.4.18",
