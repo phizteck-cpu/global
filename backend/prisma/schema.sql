@@ -3,16 +3,30 @@
 -- Purpose: Live Deployment on Hostinger MySQL
 
 -- -----------------------------------------------------------------------------
--- 1. CONFIGURATION
+-- 1. CLEANUP (Drop tables in dependency order)
 -- -----------------------------------------------------------------------------
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS `Notification`;
+DROP TABLE IF EXISTS `Redemption`;
+DROP TABLE IF EXISTS `Referral`;
+DROP TABLE IF EXISTS `Bonus`;
+DROP TABLE IF EXISTS `AuditLog`;
+DROP TABLE IF EXISTS `Withdrawal`;
+DROP TABLE IF EXISTS `Transaction`;
+DROP TABLE IF EXISTS `Contribution`;
+DROP TABLE IF EXISTS `User`;
+DROP TABLE IF EXISTS `Tier`;
+DROP TABLE IF EXISTS `Package`;
+DROP TABLE IF EXISTS `SystemConfig`;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
 -- -----------------------------------------------------------------------------
--- 2. TABLES
+-- 2. TABLES (Create in dependency order)
 -- -----------------------------------------------------------------------------
 
 -- Tiers Table
-DROP TABLE IF EXISTS `Tier`;
 CREATE TABLE `Tier` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `name` VARCHAR(191) NOT NULL UNIQUE,
@@ -26,7 +40,6 @@ CREATE TABLE `Tier` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Users Table
-DROP TABLE IF EXISTS `User`;
 CREATE TABLE `User` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `email` VARCHAR(191) NOT NULL UNIQUE,
@@ -66,8 +79,22 @@ CREATE TABLE `User` (
     INDEX `User_status_idx` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Package Table
+CREATE TABLE `Package` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(191) NOT NULL,
+    `description` TEXT,
+    `price` DOUBLE NOT NULL,
+    `bvValue` DOUBLE NOT NULL DEFAULT 0,
+    `durationWeeks` INT NOT NULL DEFAULT 0,
+    `maxQuantity` INT,
+    `isActive` BOOLEAN NOT NULL DEFAULT TRUE,
+    `imageUrl` VARCHAR(191),
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Contributions Table
-DROP TABLE IF EXISTS `Contribution`;
 CREATE TABLE `Contribution` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `userId` INT NOT NULL,
@@ -80,7 +107,6 @@ CREATE TABLE `Contribution` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Transactions Table
-DROP TABLE IF EXISTS `Transaction`;
 CREATE TABLE `Transaction` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `userId` INT NOT NULL,
@@ -96,7 +122,6 @@ CREATE TABLE `Transaction` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Withdrawals Table
-DROP TABLE IF EXISTS `Withdrawal`;
 CREATE TABLE `Withdrawal` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `userId` INT NOT NULL,
@@ -111,7 +136,6 @@ CREATE TABLE `Withdrawal` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- AuditLogs Table
-DROP TABLE IF EXISTS `AuditLog`;
 CREATE TABLE `AuditLog` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `adminId` INT NOT NULL,
@@ -125,7 +149,6 @@ CREATE TABLE `AuditLog` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- SystemConfig Table
-DROP TABLE IF EXISTS `SystemConfig`;
 CREATE TABLE `SystemConfig` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `key` VARCHAR(191) NOT NULL UNIQUE,
@@ -134,7 +157,6 @@ CREATE TABLE `SystemConfig` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Bonus Table
-DROP TABLE IF EXISTS `Bonus`;
 CREATE TABLE `Bonus` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `userId` INT NOT NULL,
@@ -149,7 +171,6 @@ CREATE TABLE `Bonus` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Referral Table
-DROP TABLE IF EXISTS `Referral`;
 CREATE TABLE `Referral` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `referrerId` INT NOT NULL,
@@ -163,24 +184,7 @@ CREATE TABLE `Referral` (
     UNIQUE KEY `Referral_referrerId_referredId_key` (`referrerId`, `referredId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Package Table
-DROP TABLE IF EXISTS `Package`;
-CREATE TABLE `Package` (
-    `id` INT AUTO_INCREMENT PRIMARY KEY,
-    `name` VARCHAR(191) NOT NULL,
-    `description` TEXT,
-    `price` DOUBLE NOT NULL,
-    `bvValue` DOUBLE NOT NULL DEFAULT 0,
-    `durationWeeks` INT NOT NULL DEFAULT 0,
-    `maxQuantity` INT,
-    `isActive` BOOLEAN NOT NULL DEFAULT TRUE,
-    `imageUrl` VARCHAR(191),
-    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- Redemption Table
-DROP TABLE IF EXISTS `Redemption`;
 CREATE TABLE `Redemption` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `userId` INT NOT NULL,
@@ -196,7 +200,6 @@ CREATE TABLE `Redemption` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Notification Table
-DROP TABLE IF EXISTS `Notification`;
 CREATE TABLE `Notification` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `userId` INT NOT NULL,
