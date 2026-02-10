@@ -27,9 +27,17 @@ async function startServer() {
             console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
         });
     } catch (error) {
-        console.error('Failed to start server:');
-        console.error(error.message);
-        process.exit(1);
+        console.error('Failed to connect to database:', error.message);
+        // Do not exit! Start server anyway so we can show the error to the user
+        // process.exit(1); 
+
+        // Store error in app for debugging endpoint
+        app.locals.dbError = error.message;
+
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`⚠️ Server running in FALLBACK mode on port ${PORT}`);
+            console.log(`❌ Database connection failed: ${error.message}`);
+        });
     }
 }
 
