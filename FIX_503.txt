@@ -1,0 +1,42 @@
+# Fix 503 Error - Start Backend on Live Server
+
+Run these commands in your server's SSH terminal:
+
+```bash
+# 1. Navigate to backend directory
+cd /home/admin/web/domains/1api.valuehills.shop/public_html
+
+# 2. Pull latest code
+git pull origin main
+
+# 3. Install dependencies
+npm install
+
+# 4. Generate Prisma
+npx prisma generate
+
+# 5. Deploy database
+npx prisma migrate deploy
+
+# 6. Start PM2
+pm2 delete all
+pm2 start index.js --name valuehills-api
+pm2 save
+pm2 startup
+
+# 7. Check status
+pm2 status
+
+# 8. Test API
+curl https://1api.valuehills.shop/api/health
+```
+
+If `pm2 status` doesn't show the process, try:
+```bash
+pm2 kill
+npm install -g pm2
+pm2 start index.js --name valuehills-api
+pm2 save
+```
+
+After it shows "online", test in your browser: https://1api.valuehills.shop/api/health
