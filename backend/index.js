@@ -18,6 +18,12 @@ process.on('unhandledRejection', (reason, promise) => {
 async function startServer() {
     try {
         console.log('Checking database connection...');
+
+        // Debug: Show which DB we are trying to connect to (Masked)
+        const dbUrl = process.env.DATABASE_URL || '';
+        const maskedUrl = dbUrl.replace(/:[^:@]*@/, ':****@');
+        console.log(`DEBUG: Connecting to [${maskedUrl}]`);
+
         await prisma.$queryRaw`SELECT 1`;
         console.log('Database connected successfully');
 
