@@ -1,0 +1,31 @@
+# Deploy API Fix - Run on Server
+
+Run these commands on your server SSH terminal:
+
+```bash
+# 1. Navigate to API directory
+cd /home/admin/web/domains/api2.valuehills.shop/public_html
+
+# 2. Pull latest code
+git pull origin main
+
+# 3. Restart PM2
+pm2 restart valuehills-api
+
+# 4. Check logs
+pm2 logs valuehills-api --lines 20
+
+# 5. Test API
+curl https://api2.valuehills.shop/api/health
+```
+
+If PM2 is not running:
+```bash
+npm install
+npx prisma generate
+pm2 delete all
+pm2 start index.js --name valuehills-api
+pm2 save
+```
+
+Tell me what you see after running these commands!
