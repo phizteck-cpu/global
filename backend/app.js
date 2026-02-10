@@ -42,6 +42,52 @@ app.use((req, res, next) => {
     next();
 });
 
+// ⚠️ Database Connection Guard Middleware
+app.use((req, res, next) => {
+    if (app.locals.dbError) {
+        // Allow static files and health checks to pass through
+        if (req.path.startsWith('/assets') || req.path === '/health' || req.path === '/debug/db') {
+            return next();
+        }
+
+        // Return 503 Service Unavailable for API requests
+        if (req.path.startsWith('/api') || req.xhr) {
+            return res.status(503).json({
+                error: 'Service Unavailable',
+                message: 'Database connection failed',
+                details: process.env.NODE_ENV === 'development' ? app.locals.dbError : 'Please contact support or try again later.'
+            });
+        }
+
+        // For browser requests, we could render a nice error page or just send the error
+        // Let's send a simple HTML error page
+        return res.status(503).send(`
+            <html>
+                <body style="font-family: system-ui; padding: 2rem; text-align: center;">
+                    <h1>⚠️ Service Temporarily Unavailable</h1>
+                    <p>The application is currently experiencing technical difficulties connecting to the database.</p>
+                    <p><strong>Error:</strong> ${app.locals.dbError}</p>
+                    <p>Please try again in a few minutes.</p>
+                    <button onclick="window.location.reload()">Reload</button>
+                </body>
+            </html>
+        `);
+    }
+    next();
+});
+
+// 🐛 Debug DB Endpoint
+app.get('/debug/db', (req, res) => {
+    res.json({
+        status: app.locals.dbError ? 'error' : 'connected',
+        error: app.locals.dbError || null,
+        env: {
+            NODE_ENV: process.env.NODE_ENV,
+            DB_URL_CONFIGURED: !!process.env.DATABASE_URL
+        }
+    });
+});
+
 const apiRouter = express.Router();
 
 // ⚙️ Contribution Automation Scheduler (Daily at Midnight)
