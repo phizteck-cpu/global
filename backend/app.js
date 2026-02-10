@@ -125,6 +125,12 @@ if (distPath) {
     // 4. Fallback API Mount (for proxies stripping /api)
     const apiPaths = ['/auth', '/users', '/wallet', '/packages', '/contributions', '/referrals', '/bonuses', '/notifications', '/withdrawals', '/redemptions', '/admin', '/dashboard', '/health'];
     app.use((req, res, next) => {
+        // Skip fallback if the request accepts HTML (likely a browser page load)
+        const acceptsHtml = req.headers.accept && req.headers.accept.includes('text/html');
+        if (acceptsHtml) {
+            return next();
+        }
+
         const isApiPath = apiPaths.some(p => req.path.startsWith(p) || req.originalUrl.startsWith(p));
         if (isApiPath) {
             return apiRouter(req, res, next);
