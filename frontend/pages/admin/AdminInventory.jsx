@@ -56,6 +56,33 @@ const AdminInventory = () => {
         }
     };
 
+    const [editingItem, setEditingItem] = useState(null);
+
+    const handleUpdateItem = async (e) => {
+        e.preventDefault();
+        try {
+            await axiosClient.put(`/inventory/${editingItem.id}`, editingItem);
+            setEditingItem(null);
+            fetchData();
+            setMsg('Item updated successfully');
+            setTimeout(() => setMsg(''), 3000);
+        } catch (error) {
+            setMsg('Failed to update item');
+        }
+    };
+
+    const handleDeleteItem = async (id) => {
+        if (!window.confirm('Are you sure you want to remove this item from inventory?')) return;
+        try {
+            await axiosClient.delete(`/inventory/${id}`);
+            fetchData();
+            setMsg('Item removed successfully');
+            setTimeout(() => setMsg(''), 3000);
+        } catch (error) {
+            setMsg('Failed to delete item');
+        }
+    };
+
     if (loading && inventory.length === 0) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -99,7 +126,7 @@ const AdminInventory = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                 {/* Stock Management Table */}
-                <div className="lg:col-span-7 space-y-6">
+                <div className="lg:col-span-12 space-y-6">
                     <div className="flex items-center gap-3 ml-2">
                         <Box className="text-primary" size={24} />
                         <h3 className="text-xl font-bold text-white font-heading">Current Commodities</h3>
@@ -112,6 +139,7 @@ const AdminInventory = () => {
                                         <th className="px-8 py-5 text-[10px] uppercase tracking-[0.2em] font-black text-noble-gray">Item Category</th>
                                         <th className="px-8 py-5 text-[10px] uppercase tracking-[0.2em] font-black text-noble-gray">Stock Level</th>
                                         <th className="px-8 py-5 text-[10px] uppercase tracking-[0.2em] font-black text-noble-gray">Estimated Market Value</th>
+                                        <th className="px-8 py-5 text-[10px] uppercase tracking-[0.2em] font-black text-noble-gray">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
@@ -121,8 +149,8 @@ const AdminInventory = () => {
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-3">
                                                     <span className={`px-4 py-1.5 rounded-full text-xs font-black tracking-widest uppercase border ${item.quantity < 10
-                                                            ? 'bg-red-500/10 text-red-500 border-red-500/20'
-                                                            : 'bg-primary/10 text-primary border-primary/20'}`}>
+                                                        ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                                                        : 'bg-primary/10 text-primary border-primary/20'}`}>
                                                         {item.quantity} {item.unit}
                                                     </span>
                                                     {item.quantity < 10 && <AlertTriangle size={14} className="text-red-500 animate-pulse" />}
@@ -131,11 +159,33 @@ const AdminInventory = () => {
                                             <td className="px-8 py-6 text-2xl font-black font-heading tracking-tighter text-white/80">
                                                 ₦{item.priceEstimate?.toLocaleString()}
                                             </td>
+                                            <td className="px-8 py-6">
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => setEditingItem({
+                                                            id: item.id,
+                                                            name: item.name,
+                                                            quantity: item.quantity,
+                                                            unit: item.unit,
+                                                            priceEstimate: item.priceEstimate
+                                                        })}
+                                                        className="p-2 text-noble-gray hover:text-white transition-colors"
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteItem(item.id)}
+                                                        className="p-2 text-red-500/50 hover:text-red-500 transition-colors"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </td>
                                         </tr>
                                     ))}
                                     {inventory.length === 0 && (
                                         <tr>
-                                            <td colSpan="3" className="px-8 py-20 text-center text-noble-gray italic">No inventory records found. Add stock to begin.</td>
+                                            <td colSpan="4" className="px-8 py-20 text-center text-noble-gray italic">No inventory records found. Add stock to begin.</td>
                                         </tr>
                                     )}
                                 </tbody>
@@ -145,14 +195,14 @@ const AdminInventory = () => {
                 </div>
 
                 {/* Redemption Requests Queue */}
-                <div className="lg:col-span-5 space-y-6">
+                <div className="lg:col-span-12 space-y-6">
                     <div className="flex items-center gap-3 ml-2">
                         <ClipboardList className="text-secondary" size={24} />
                         <h3 className="text-xl font-bold text-white font-heading">Fulfillment Queue</h3>
                     </div>
-                    <div className="space-y-4 max-h-[700px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {requests.length === 0 ? (
-                            <div className="glass-card p-12 rounded-[2rem] text-center space-y-4 border-dashed border-white/10">
+                            <div className="md:col-span-2 lg:col-span-3 glass-card p-12 rounded-[2rem] text-center space-y-4 border-dashed border-white/10">
                                 <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto text-noble-gray">
                                     <Truck size={32} />
                                 </div>
@@ -167,8 +217,8 @@ const AdminInventory = () => {
                                             <p className="text-[10px] uppercase tracking-widest text-noble-gray mt-1">Requested: {new Date(req.requestDate).toLocaleDateString()}</p>
                                         </div>
                                         <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border ${req.status === 'DELIVERED'
-                                                ? 'bg-primary/10 text-primary border-primary/20'
-                                                : 'bg-secondary/10 text-secondary border-secondary/20'}`}>
+                                            ? 'bg-primary/10 text-primary border-primary/20'
+                                            : 'bg-secondary/10 text-secondary border-secondary/20'}`}>
                                             {req.status}
                                         </span>
                                     </div>
@@ -187,9 +237,9 @@ const AdminInventory = () => {
                                             </button>
                                             <button
                                                 onClick={() => handleUpdateStatus(req.id, 'DELIVERED')}
-                                                className="flex-1 py-3 bg-primary/10 text-primary border border-primary/20 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary hover:text-white transition-all active:scale-[0.98]"
+                                                className="flex-1 py-4 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-secondary transition-all active:scale-[0.98]"
                                             >
-                                                Fulfill
+                                                Confirm Fulfiled
                                             </button>
                                         </div>
                                     )}
@@ -200,9 +250,9 @@ const AdminInventory = () => {
                 </div>
             </div>
 
-            {/* Premium Add Modal */}
+            {/* Premium Add/Edit Modal */}
             <AnimatePresence>
-                {showAddModal && (
+                {(showAddModal || editingItem) && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -216,18 +266,22 @@ const AdminInventory = () => {
                             className="bg-slate-900 border border-white/10 p-10 rounded-[3rem] max-w-lg w-full shadow-[0_0_100px_rgba(0,0,0,0.5)]"
                         >
                             <div className="mb-8">
-                                <h3 className="text-3xl font-black font-heading text-white tracking-tighter">Vault Restock</h3>
+                                <h3 className="text-3xl font-black font-heading text-white tracking-tighter">
+                                    {editingItem ? 'Update Vault Item' : 'Vault Restock'}
+                                </h3>
                                 <p className="text-noble-gray text-sm mt-1">Enter commodity details to update the cooperative inventory.</p>
                             </div>
 
-                            <form onSubmit={handleAddItem} className="space-y-6 text-left">
+                            <form onSubmit={editingItem ? handleUpdateItem : handleAddItem} className="space-y-6 text-left">
                                 <div className="space-y-2">
                                     <label className="text-[10px] uppercase tracking-widest font-black text-noble-gray ml-2">Commodity Name</label>
                                     <input
                                         required
                                         type="text"
-                                        value={newItem.name}
-                                        onChange={e => setNewItem({ ...newItem, name: e.target.value })}
+                                        value={editingItem ? editingItem.name : newItem.name}
+                                        onChange={e => editingItem
+                                            ? setEditingItem({ ...editingItem, name: e.target.value })
+                                            : setNewItem({ ...newItem, name: e.target.value })}
                                         className="w-full bg-white/5 border border-white/10 rounded-[1.5rem] p-4 text-white p-5 focus:border-primary/50 outline-none focus:ring-4 focus:ring-primary/5 transition-all"
                                         placeholder="e.g. Royal Long Grain Rice (50kg)"
                                     />
@@ -238,8 +292,10 @@ const AdminInventory = () => {
                                         <input
                                             required
                                             type="number"
-                                            value={newItem.quantity}
-                                            onChange={e => setNewItem({ ...newItem, quantity: e.target.value })}
+                                            value={editingItem ? editingItem.quantity : newItem.quantity}
+                                            onChange={e => editingItem
+                                                ? setEditingItem({ ...editingItem, quantity: e.target.value })
+                                                : setNewItem({ ...newItem, quantity: e.target.value })}
                                             className="w-full bg-white/5 border border-white/10 rounded-[1.5rem] p-4 text-white p-5 focus:border-primary/50 outline-none focus:ring-4 focus:ring-primary/5 transition-all"
                                             placeholder="100"
                                         />
@@ -249,8 +305,10 @@ const AdminInventory = () => {
                                         <input
                                             required
                                             type="text"
-                                            value={newItem.unit}
-                                            onChange={e => setNewItem({ ...newItem, unit: e.target.value })}
+                                            value={editingItem ? editingItem.unit : newItem.unit}
+                                            onChange={e => editingItem
+                                                ? setEditingItem({ ...editingItem, unit: e.target.value })
+                                                : setNewItem({ ...newItem, unit: e.target.value })}
                                             className="w-full bg-white/5 border border-white/10 rounded-[1.5rem] p-4 text-white p-5 focus:border-primary/50 outline-none focus:ring-4 focus:ring-primary/5 transition-all"
                                             placeholder="bags"
                                         />
@@ -261,8 +319,10 @@ const AdminInventory = () => {
                                     <input
                                         required
                                         type="number"
-                                        value={newItem.priceEstimate}
-                                        onChange={e => setNewItem({ ...newItem, priceEstimate: e.target.value })}
+                                        value={editingItem ? editingItem.priceEstimate : newItem.priceEstimate}
+                                        onChange={e => editingItem
+                                            ? setEditingItem({ ...editingItem, priceEstimate: e.target.value })
+                                            : setNewItem({ ...newItem, priceEstimate: e.target.value })}
                                         className="w-full bg-white/5 border border-white/10 rounded-[1.5rem] p-4 text-white p-5 focus:border-primary/50 outline-none focus:ring-4 focus:ring-primary/5 transition-all"
                                         placeholder="55000"
                                     />
@@ -270,7 +330,7 @@ const AdminInventory = () => {
                                 <div className="flex gap-6 mt-10 pt-6 border-t border-white/5">
                                     <button
                                         type="button"
-                                        onClick={() => setShowAddModal(false)}
+                                        onClick={() => { setShowAddModal(false); setEditingItem(null); }}
                                         className="flex-1 py-4 text-noble-gray font-black uppercase tracking-widest text-xs hover:text-white transition-colors"
                                     >
                                         Cancel
@@ -279,7 +339,7 @@ const AdminInventory = () => {
                                         type="submit"
                                         className="flex-1 py-4 bg-primary text-white font-black uppercase tracking-tighter rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
                                     >
-                                        Confirm Entry
+                                        {editingItem ? 'Save Changes' : 'Confirm Entry'}
                                     </button>
                                 </div>
                             </form>

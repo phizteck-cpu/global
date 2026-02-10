@@ -14,13 +14,16 @@ router.get('/', authenticateToken, anyAdmin, async (req, res) => {
         });
 
         // Map Package fields to what AdminInventory.jsx expects
-        const inventory = packages.map(pkg => ({
-            id: pkg.id,
-            name: pkg.name,
-            quantity: pkg.maxQuantity || 0,
-            unit: 'units',
-            priceEstimate: pkg.price
-        }));
+        const inventory = packages.map(pkg => {
+            const unitMatch = pkg.description?.match(/Unit:\s*(.*)/);
+            return {
+                id: pkg.id,
+                name: pkg.name,
+                quantity: pkg.maxQuantity || 0,
+                unit: unitMatch ? unitMatch[1] : 'units',
+                priceEstimate: pkg.price
+            };
+        });
 
         res.json(inventory);
     } catch (error) {
