@@ -164,7 +164,8 @@ if (!distPath) {
     possiblePaths.forEach(p => console.error(`[SPA ERROR]   - ${p}`));
 }
 
-if (distPath) {
+if (distPath && process.env.API_ONLY !== 'true') {
+    // Only serve static files if NOT in API-only mode
     // 3. Serve Static Assets (excluding index.html)
     app.use(express.static(distPath, { index: false }));
 
@@ -197,6 +198,10 @@ if (distPath) {
         }
 
         // Serve index.html for all other routes to let React handle routing
+        if (process.env.API_ONLY === 'true') {
+            // API-only mode - don't serve frontend
+            return res.status(404).json({ error: 'API endpoint not found', path: req.url });
+        }
         if (indexPath && fs.existsSync(indexPath)) {
             res.sendFile(indexPath);
         } else if (process.env.NODE_ENV === 'development') {
@@ -207,9 +212,13 @@ if (distPath) {
         }
     });
 } else {
-    // API-only mode
+    // API-only mode - no frontend served
     app.get('/', (req, res) => {
-        res.send('Backend API is running. Frontend build not found.');
+        res.json({ 
+            status: 'ok', 
+            message: 'Backend API is running',
+            endpoints: ['/api/auth', '/api/users', '/api/wallet', '/api/dashboard', '/api/admin']
+        });
     });
 }
 
