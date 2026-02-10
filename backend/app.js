@@ -151,8 +151,11 @@ if (distPath) {
         }
 
         // Serve index.html for all other routes to let React handle routing
-        if (fs.existsSync(indexPath)) {
+        if (indexPath && fs.existsSync(indexPath)) {
             res.sendFile(indexPath);
+        } else if (process.env.NODE_ENV === 'development') {
+            // In development, redirect to Vite dev server
+            res.redirect(`http://localhost:5173${req.originalUrl}`);
         } else {
             res.status(500).send('Frontend build missing or inaccessible.');
         }
