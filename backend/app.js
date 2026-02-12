@@ -45,21 +45,9 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Security Headers
+// Security Headers (API-only mode - minimal headers)
 app.use((req, res, next) => {
-    // Content Security Policy - Allow necessary scripts
-    res.setHeader(
-        'Content-Security-Policy',
-        "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-        "style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' data: https:; " +
-        "font-src 'self' data:; " +
-        "connect-src 'self' https://api2.valuehills.shop https://valuehills.shop; " +
-        "frame-ancestors 'none';"
-    );
-    
-    // Other security headers
+    // Only set security headers, no CSP for API-only backend
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-XSS-Protection', '1; mode=block');

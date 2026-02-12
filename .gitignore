@@ -29,15 +29,22 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Database
+# Database files
 backend/dev.db
 backend/dev.db-journal
 backend/prisma/*.db
+backend/prisma/dev.db
+backend/prisma/prod.db
+backend/prisma/test.db
 prisma/*.db
 prisma/*.db-journal
+*.db
+*.db-journal
 
 # Uploads (user-generated content)
-backend/uploads/
+backend/uploads/activation-proofs/*
+backend/uploads/payment-proofs/*
+!backend/uploads/.gitkeep
 uploads/
 
 # Logs
@@ -47,6 +54,4 @@ logs/
 .docker/
 
 # Old backend backup
-backend/
 backend_old_backup/
-

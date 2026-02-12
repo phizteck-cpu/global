@@ -10,21 +10,18 @@
     RewriteRule ^(.*)$ http://localhost:5000/$1 [P,L]
 </IfModule>
 
-# Security Headers
+# Security Headers (API-only - no CSP needed)
 <IfModule mod_headers.c>
-    # Remove restrictive CSP that blocks eval
+    # Remove any CSP headers
     Header unset Content-Security-Policy
     
-    # Set permissive CSP for Node.js/React app
-    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api2.valuehills.shop https://valuehills.shop; frame-ancestors 'none';"
-    
-    # Other security headers
+    # Basic security headers for API
     Header set X-Content-Type-Options "nosniff"
     Header set X-Frame-Options "DENY"
     Header set X-XSS-Protection "1; mode=block"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
     
-    # CORS headers
+    # CORS headers (handled by Express, but backup here)
     Header set Access-Control-Allow-Origin "*"
     Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS, PATCH"
     Header set Access-Control-Allow-Headers "Content-Type, Authorization"
