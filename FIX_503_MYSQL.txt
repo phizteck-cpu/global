@@ -1,0 +1,81 @@
+╔═══════════════════════════════════════════════════════════╗
+║          🚨 503 ERROR - DATABASE NOT CONNECTED            ║
+╚═══════════════════════════════════════════════════════════╝
+
+PROBLEM: DATABASE_URL environment variable not updated yet
+
+═══════════════════════════════════════════════════════════
+  FIX IT NOW - 2 STEPS
+═══════════════════════════════════════════════════════════
+
+STEP 1: UPDATE DATABASE_URL IN HOSTINGER
+───────────────────────────────────────────────────────────
+
+1. Login: https://hpanel.hostinger.com
+
+2. Go to: Website → Your Node.js Application
+
+3. Click: "Environment Variables" tab
+
+4. Find: DATABASE_URL
+
+5. Change it to EXACTLY this (copy/paste):
+
+mysql://u948761456_value1:Ge2hilv4A27luE@localhost:3306/u948761456_hills
+
+6. Click: "Save"
+
+7. Click: "Restart" button (top right)
+
+STEP 2: INITIALIZE DATABASE
+───────────────────────────────────────────────────────────
+
+After restart, use File Manager Terminal:
+
+1. Go to: Files → File Manager
+
+2. Navigate to your app folder:
+   domains/api2.valuehills.shop/public_html
+
+3. Click: "Terminal" button at top
+
+4. Run these commands ONE BY ONE:
+
+npx prisma generate --schema=backend/prisma/schema.prisma
+
+npx prisma db push --schema=backend/prisma/schema.prisma
+
+node backend/prisma/seed.js
+
+5. Go back to Node.js app page
+
+6. Click: "Restart" button again
+
+═══════════════════════════════════════════════════════════
+  TEST
+═══════════════════════════════════════════════════════════
+
+Visit: https://api2.valuehills.shop/api/health
+
+Should see:
+{
+  "status": "ok",
+  "database": "connected"
+}
+
+═══════════════════════════════════════════════════════════
+  IMPORTANT
+═══════════════════════════════════════════════════════════
+
+⚠️ The DATABASE_URL MUST be updated in Hostinger!
+
+The code is deployed, but Hostinger is still using the old
+DATABASE_URL value. You need to update it manually in the
+Hostinger control panel.
+
+Current (wrong): file:./backend/prisma/prod.db
+Correct (MySQL): mysql://u948761456_value1:Ge2hilv4A27luE@localhost:3306/u948761456_hills
+
+═══════════════════════════════════════════════════════════
+
+🎯 DO STEP 1 FIRST - Update DATABASE_URL in Hostinger!
