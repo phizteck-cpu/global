@@ -1,46 +1,32 @@
 #!/usr/bin/env node
 
-// Hostinger-compatible entry point
-// Entry Point: server.js
-// Start Command: node server.js
+/**
+ * Hostinger Entry Point
+ * This file serves as the entry point for Hostinger Cloud Hosting
+ * It loads the backend application from the backend directory
+ */
 
-import './backend/loadEnv.js';
-import backendApp from './backend/app.js';
-import prisma from './backend/prisma/client.js';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { config } from 'dotenv';
 
-const PORT = process.env.PORT || 5000;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-console.log('🚀 Starting ValueHills API Server...');
-console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+// Load environment variables from backend directory
+const envPath = join(__dirname, 'backend', '.env.production');
+config({ path: envPath });
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-    console.error('Uncaught Exception:', error);
+console.log('🚀 Starting Valuehills Backend Server...');
+console.log(`📁 Root Directory: ${__dirname}`);
+console.log(`📝 Environment: ${process.env.NODE_ENV || 'production'}`);
+console.log(`🔧 Loading backend from: ${join(__dirname, 'backend')}`);
+
+// Change working directory to backend
+process.chdir(join(__dirname, 'backend'));
+
+// Import and start the backend server
+import('./backend/index.js').catch((error) => {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
 });
-
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-// Start server
-async function start() {
-    try {
-        console.log('Checking database connection...');
-        await prisma.$queryRaw`SELECT 1`;
-        console.log('✅ Database connected');
-
-        backendApp.listen(PORT, '0.0.0.0', () => {
-            console.log(`✅ Server running on port ${PORT}`);
-            console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-        });
-    } catch (error) {
-        console.error('❌ Database connection failed:', error.message);
-        console.log('⚠️ Starting server anyway (limited functionality)');
-
-        backendApp.listen(PORT, '0.0.0.0', () => {
-            console.log(`✅ Server running on port ${PORT} (no database)`);
-        });
-    }
-}
-
-start();

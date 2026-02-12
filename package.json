@@ -4,12 +4,13 @@
     "version": "2.0.0",
     "type": "module",
     "scripts": {
+        "postinstall": "cd backend && npm install && npx prisma generate",
         "install:backend": "cd backend && npm install",
         "install:frontend": "cd frontend && npm install",
         "build:backend": "cd backend && npx prisma generate && npx prisma db push",
         "build:frontend": "cd frontend && npm run build",
         "build": "npm run install:backend && npm run build:backend && npm run install:frontend && npm run build:frontend && cp -r frontend/dist backend/",
-        "start": "cd backend && npm start",
+        "start": "node server.js",
         "dev:backend": "cd backend && npm run dev",
         "dev:frontend": "cd frontend && npm run dev",
         "seed": "cd backend && npm run seed"
