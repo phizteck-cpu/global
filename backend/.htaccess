@@ -12,19 +12,21 @@
 
 # Security Headers (API-only - no CSP needed)
 <IfModule mod_headers.c>
-    # Remove any CSP headers
-    Header unset Content-Security-Policy
+    # Aggressively remove any CSP headers from anywhere
+    Header always unset Content-Security-Policy
+    Header always unset X-Content-Security-Policy
+    Header always unset X-WebKit-CSP
     
     # Basic security headers for API
-    Header set X-Content-Type-Options "nosniff"
-    Header set X-Frame-Options "DENY"
-    Header set X-XSS-Protection "1; mode=block"
-    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
     
     # CORS headers (handled by Express, but backup here)
-    Header set Access-Control-Allow-Origin "*"
-    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
 </IfModule>
 
 # Disable directory browsing

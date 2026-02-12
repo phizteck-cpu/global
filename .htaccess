@@ -10,24 +10,23 @@
     RewriteRule ^(.*)$ http://localhost:5000/$1 [P,L]
 </IfModule>
 
-# Security Headers
+# Security Headers (API-only - no CSP)
 <IfModule mod_headers.c>
-    # Remove restrictive CSP that blocks eval
-    Header unset Content-Security-Policy
+    # Completely remove all CSP headers
+    Header always unset Content-Security-Policy
+    Header always unset X-Content-Security-Policy
+    Header always unset X-WebKit-CSP
     
-    # Set permissive CSP for Node.js/React app
-    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api2.valuehills.shop https://valuehills.shop; frame-ancestors 'none';"
-    
-    # Other security headers
-    Header set X-Content-Type-Options "nosniff"
-    Header set X-Frame-Options "DENY"
-    Header set X-XSS-Protection "1; mode=block"
-    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    # Basic security headers for API
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
     
     # CORS headers
-    Header set Access-Control-Allow-Origin "*"
-    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
 </IfModule>
 
 # Disable directory browsing
