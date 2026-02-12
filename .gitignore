@@ -46,3 +46,7 @@ logs/
 # Docker
 .docker/
 
+# Old backend backup
+backend/
+backend_old_backup/
+
