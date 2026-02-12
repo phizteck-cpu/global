@@ -26,7 +26,7 @@ router.get('/stats', auth, async (req, res) => {
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         const weeksCompleted = user._count.contributions;
-        const totalWeeks = 45; // Fixed as per requirements
+        const totalWeeks = user.tier?.durationWeeks || 45; // Use tier's duration or default to 45
 
         // Lock Logic (7 months from join date)
         const joinDate = new Date(user.joinDate);

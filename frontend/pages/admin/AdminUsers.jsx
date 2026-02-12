@@ -17,7 +17,9 @@ import {
     Calendar,
     Globe,
     Terminal,
-    Fingerprint
+    Fingerprint,
+    Ban,
+    Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -93,6 +95,63 @@ const AdminUsers = () => {
             }
         } catch (error) {
             console.error('Action failed');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleBanUser = async () => {
+        const reason = prompt('Enter ban reason (required):');
+        if (!reason || reason.trim().length === 0) {
+            alert('Ban reason is required');
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to BAN ${selectedUser.username}? This will prevent them from logging in.`)) {
+            return;
+        }
+
+        setActionLoading(true);
+        try {
+            await axiosClient.post(`/admin/users/${selectedUser.id}/ban`, { reason });
+            alert('User banned successfully');
+            fetchUsers();
+            setShowActions(false);
+            if (showProfile) {
+                setShowProfile(false);
+            }
+        } catch (error) {
+            alert(error.response?.data?.error || 'Failed to ban user');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleDeleteUser = async () => {
+        const confirmation = prompt(`⚠️ DANGER: This will PERMANENTLY DELETE ${selectedUser.username} and ALL their data.\n\nType "DELETE" to confirm:`);
+        
+        if (confirmation !== 'DELETE') {
+            alert('Deletion cancelled');
+            return;
+        }
+
+        const finalConfirm = confirm(`FINAL WARNING: Are you absolutely sure you want to permanently delete ${selectedUser.username}?\n\nThis action CANNOT be undone!`);
+        
+        if (!finalConfirm) {
+            return;
+        }
+
+        setActionLoading(true);
+        try {
+            await axiosClient.delete(`/admin/users/${selectedUser.id}`, {
+                data: { confirmation: 'DELETE' }
+            });
+            alert('User account permanently deleted');
+            fetchUsers();
+            setShowActions(false);
+            setShowProfile(false);
+        } catch (error) {
+            alert(error.response?.data?.error || 'Failed to delete user');
         } finally {
             setActionLoading(false);
         }
@@ -425,12 +484,21 @@ const AdminUsers = () => {
                                     loading={actionLoading}
                                 />
                                 <ActionButton
-                                    label={selectedUser.status === 'ACTIVE' ? "Deactivate Entity" : "Activate Entity"}
+                                    label={selectedUser.status === 'ACTIVE' ? "Suspend Account" : "Activate Account"}
                                     icon={selectedUser.status === 'ACTIVE' ? <UserX size={20} /> : <UserCheck size={20} />}
-                                    color={selectedUser.status === 'ACTIVE' ? "bg-red-500/10 text-red-500" : "bg-emerald-500/10 text-emerald-400"}
+                                    color={selectedUser.status === 'ACTIVE' ? "bg-amber-500/10 text-amber-500" : "bg-emerald-500/10 text-emerald-400"}
                                     onClick={() => handleUpdateStatus(selectedUser.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE', selectedUser.kycStatus)}
                                     loading={actionLoading}
                                 />
+                                {selectedUser.status !== 'BANNED' && (
+                                    <ActionButton
+                                        label="Ban Account (Permanent Block)"
+                                        icon={<Ban size={20} />}
+                                        color="bg-red-600/10 text-red-500"
+                                        onClick={handleBanUser}
+                                        loading={actionLoading}
+                                    />
+                                )}
                                 {currentUser?.role === 'SUPERADMIN' && (
                                     <>
                                         <ActionButton
@@ -468,6 +536,18 @@ const AdminUsers = () => {
                                                     Sync
                                                 </button>
                                             </div>
+                                        </div>
+                                        
+                                        {/* Danger Zone */}
+                                        <div className="pt-6 mt-6 border-t border-red-500/20">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500 mb-3">⚠️ Danger Zone</p>
+                                            <ActionButton
+                                                label="Delete Account (PERMANENT)"
+                                                icon={<Trash2 size={20} />}
+                                                color="bg-red-900/20 text-red-400 border border-red-500/30"
+                                                onClick={handleDeleteUser}
+                                                loading={actionLoading}
+                                            />
                                         </div>
                                     </>
                                 )}

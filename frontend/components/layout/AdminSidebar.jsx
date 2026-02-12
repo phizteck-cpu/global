@@ -9,7 +9,9 @@ import {
     LayoutTemplate,
     CheckCircle,
     FileText,
-    ShieldAlert
+    ShieldAlert,
+    Wallet,
+    DollarSign
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
@@ -23,6 +25,8 @@ const AdminSidebar = ({ isMobile, isOpen, setIsOpen }) => {
         { icon: ShieldAlert, label: 'Staff Management', path: '/admin/management', roles: ['SUPERADMIN'] },
         { icon: ShoppingBag, label: 'Manage Tiers', path: '/admin/packages', roles: ['SUPERADMIN'] },
         { icon: ShoppingBag, label: 'Inventory (Food)', path: '/admin/inventory' },
+        { icon: Wallet, label: 'Payment Approvals', path: '/admin/payments' },
+        { icon: DollarSign, label: 'Fund Users', path: '/admin/funding' },
         { icon: CheckCircle, label: 'Payout Approvals', path: '/admin/approvals' },
         { icon: Users, label: 'User Management', path: '/admin/users' },
         { icon: FileText, label: 'Audit Logs', path: '/admin/audit', roles: ['SUPERADMIN'] },

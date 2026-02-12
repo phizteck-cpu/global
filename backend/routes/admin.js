@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../prisma/client.js';
 import { authenticateToken, isSuperAdmin, isAdmin, isFinance, isOps, anyAdmin } from '../middleware/auth.js';
+import { enforceContributionPolicy, getEnforcementStats, checkUserEnforcement } from '../services/contributionEnforcement.js';
 
 const router = express.Router();
 
@@ -164,28 +165,176 @@ router.get('/users/:id', authenticateToken, anyAdmin, async (req, res) => {
 router.patch('/users/:id/status', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { status, kycStatus } = req.body;
+        const { status, kycVerified } = req.body;
+        const adminId = req.user.userId;
 
-        const updatedUser = await prisma.user.update({
-            where: { id: parseInt(id) },
-            data: {
-                ...(status && { status }),
-                ...(kycStatus && { kycStatus })
+        const user = await prisma.user.findUnique({ where: { id: parseInt(id) } });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Prevent admins from modifying other admins
+        if (user.role !== 'MEMBER') {
+            return res.status(403).json({ error: 'Cannot modify admin accounts' });
+        }
+
+        const updateData = {};
+        if (status) updateData.status = status;
+        if (kycVerified !== undefined) updateData.kycStatus = kycVerified ? 'VERIFIED' : 'REJECTED';
+
+        await prisma.$transaction(async (tx) => {
+            await tx.user.update({
+                where: { id: parseInt(id) },
+                data: updateData
+            });
+
+            // Create audit log
+            await tx.auditLog.create({
+                data: {
+                    adminId,
+                    action: 'USER_STATUS_UPDATE',
+                    targetUserId: parseInt(id),
+                    details: `Updated user status to ${status || 'unchanged'}, KYC: ${kycVerified !== undefined ? (kycVerified ? 'VERIFIED' : 'REJECTED') : 'unchanged'}`
+                }
+            });
+
+            // Notify user if suspended or banned
+            if (status === 'SUSPENDED' || status === 'BANNED') {
+                await tx.notification.create({
+                    data: {
+                        userId: parseInt(id),
+                        type: 'SYSTEM',
+                        title: `Account ${status === 'SUSPENDED' ? 'Suspended' : 'Banned'} ⚠️`,
+                        message: `Your account has been ${status.toLowerCase()} by admin. Please contact support for more information.`
+                    }
+                });
             }
         });
 
-        await prisma.auditLog.create({
-            data: {
-                adminId: req.user.id,
-                action: 'UPDATE_USER_STATUS',
-                details: `Updated user ${id} status: ${status}, KYC: ${kycStatus}`,
-                targetUserId: parseInt(id)
-            }
-        });
-
-        res.json(updatedUser);
+        res.json({ message: 'User status updated successfully' });
     } catch (error) {
+        console.error(error);
         res.status(500).json({ error: 'Failed to update user status' });
+    }
+});
+
+// Admin Control: Ban User Account
+router.post('/users/:id/ban', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason } = req.body;
+        const adminId = req.user.userId;
+
+        if (!reason || reason.trim().length === 0) {
+            return res.status(400).json({ error: 'Ban reason is required' });
+        }
+
+        const user = await prisma.user.findUnique({ where: { id: parseInt(id) } });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (user.role !== 'MEMBER') {
+            return res.status(403).json({ error: 'Cannot ban admin accounts' });
+        }
+
+        await prisma.$transaction(async (tx) => {
+            await tx.user.update({
+                where: { id: parseInt(id) },
+                data: { status: 'BANNED' }
+            });
+
+            // Create audit log
+            await tx.auditLog.create({
+                data: {
+                    adminId,
+                    action: 'USER_BANNED',
+                    targetUserId: parseInt(id),
+                    details: `Banned user account. Reason: ${reason}`
+                }
+            });
+
+            // Notify user
+            await tx.notification.create({
+                data: {
+                    userId: parseInt(id),
+                    type: 'SYSTEM',
+                    title: 'Account Banned 🚫',
+                    message: `Your account has been permanently banned. Reason: ${reason}`
+                }
+            });
+        });
+
+        res.json({ message: 'User account banned successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to ban user' });
+    }
+});
+
+// Super Admin Control: Delete User Account (PERMANENT)
+router.delete('/users/:id', authenticateToken, isSuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { confirmation } = req.body;
+        const adminId = req.user.userId;
+
+        if (confirmation !== 'DELETE') {
+            return res.status(400).json({ error: 'Confirmation required. Send { "confirmation": "DELETE" }' });
+        }
+
+        const user = await prisma.user.findUnique({ where: { id: parseInt(id) } });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (user.role !== 'MEMBER') {
+            return res.status(403).json({ error: 'Cannot delete admin accounts' });
+        }
+
+        // Store user info for audit log before deletion
+        const userInfo = `${user.username} (${user.email})`;
+
+        await prisma.$transaction(async (tx) => {
+            // Delete related records first (due to foreign key constraints)
+            await tx.notification.deleteMany({ where: { userId: parseInt(id) } });
+            await tx.contribution.deleteMany({ where: { userId: parseInt(id) } });
+            await tx.transaction.deleteMany({ where: { userId: parseInt(id) } });
+            await tx.withdrawal.deleteMany({ where: { userId: parseInt(id) } });
+            await tx.bonus.deleteMany({ where: { userId: parseInt(id) } });
+            await tx.redemption.deleteMany({ where: { userId: parseInt(id) } });
+            await tx.paymentProof.deleteMany({ where: { userId: parseInt(id) } });
+            
+            // Delete referrals
+            await tx.referral.deleteMany({ 
+                where: { 
+                    OR: [
+                        { referrerId: parseInt(id) },
+                        { referredId: parseInt(id) }
+                    ]
+                } 
+            });
+
+            // Delete audit logs where user is target
+            await tx.auditLog.deleteMany({ where: { targetUserId: parseInt(id) } });
+
+            // Finally delete the user
+            await tx.user.delete({ where: { id: parseInt(id) } });
+
+            // Create audit log for deletion
+            await tx.auditLog.create({
+                data: {
+                    adminId,
+                    action: 'USER_DELETED',
+                    details: `Permanently deleted user account: ${userInfo}`
+                }
+            });
+        });
+
+        res.json({ message: 'User account permanently deleted' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to delete user account' });
     }
 });
 
@@ -747,11 +896,34 @@ router.put('/packages/:id', authenticateToken, isSuperAdmin, async (req, res) =>
 router.delete('/packages/:id', authenticateToken, isSuperAdmin, async (req, res) => {
     try {
         const { id } = req.params;
+        
+        // Check if this is a tier or package by trying tier first
+        const tier = await prisma.tier.findUnique({ where: { id: parseInt(id) } });
+        
+        if (tier) {
+            // Check if any users are using this tier
+            const usersWithTier = await prisma.user.count({ where: { tierId: parseInt(id) } });
+            
+            if (usersWithTier > 0) {
+                return res.status(400).json({ 
+                    error: 'Cannot delete tier',
+                    message: `${usersWithTier} member(s) are currently enrolled in this tier. Please migrate them first.`
+                });
+            }
+            
+            await prisma.tier.delete({ where: { id: parseInt(id) } });
+            return res.json({ message: 'Tier deleted successfully' });
+        }
+        
+        // If not a tier, try package
         await prisma.package.delete({ where: { id: parseInt(id) } });
-        res.json({ message: 'Package deleted' });
+        res.json({ message: 'Package deleted successfully' });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Failed to delete package' });
+        if (error.code === 'P2025') {
+            return res.status(404).json({ error: 'Tier or package not found' });
+        }
+        res.status(500).json({ error: 'Failed to delete' });
     }
 });
 
@@ -805,6 +977,477 @@ router.post('/redemptions/:id/status', authenticateToken, anyAdmin, async (req, 
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to update redemption status' });
+    }
+});
+
+// ============================================
+// ADMIN FUNDING MANAGEMENT
+// ============================================
+
+// POST /api/admin/fund-user - Manually fund a user's wallet
+router.post('/fund-user', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const { userId, amount, reason } = req.body;
+        const adminId = req.user.userId;
+
+        if (!userId || !amount || amount <= 0) {
+            return res.status(400).json({ error: 'Valid user ID and amount are required' });
+        }
+
+        const user = await prisma.user.findUnique({ where: { id: parseInt(userId) } });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        await prisma.$transaction(async (tx) => {
+            // Credit user wallet
+            await tx.user.update({
+                where: { id: parseInt(userId) },
+                data: { walletBalance: { increment: parseFloat(amount) } }
+            });
+
+            // Create transaction record
+            await tx.transaction.create({
+                data: {
+                    userId: parseInt(userId),
+                    type: 'FUNDING',
+                    ledgerType: 'VIRTUAL',
+                    direction: 'IN',
+                    amount: parseFloat(amount),
+                    status: 'SUCCESS',
+                    reference: `ADMIN-FUND-${Date.now()}`,
+                    description: reason || 'Manual funding by admin'
+                }
+            });
+
+            // Create notification for user
+            await tx.notification.create({
+                data: {
+                    userId: parseInt(userId),
+                    type: 'SYSTEM',
+                    title: 'Wallet Funded 💰',
+                    message: `Your wallet has been credited with ₦${parseFloat(amount).toLocaleString()} by admin. ${reason ? `Reason: ${reason}` : ''}`
+                }
+            });
+
+            // Create audit log
+            await tx.auditLog.create({
+                data: {
+                    adminId,
+                    action: 'MANUAL_WALLET_FUNDING',
+                    targetUserId: parseInt(userId),
+                    details: `Funded user wallet with ₦${amount}. Reason: ${reason || 'Not specified'}`
+                }
+            });
+        });
+
+        res.json({ message: 'User wallet funded successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fund user wallet' });
+    }
+});
+
+// POST /api/admin/deduct-user - Manually deduct from a user's wallet (SUPERADMIN only)
+router.post('/deduct-user', authenticateToken, isSuperAdmin, async (req, res) => {
+    try {
+        const { userId, amount, reason } = req.body;
+        const adminId = req.user.userId;
+
+        if (!userId || !amount || amount <= 0) {
+            return res.status(400).json({ error: 'Valid user ID and amount are required' });
+        }
+
+        if (!reason || reason.trim().length === 0) {
+            return res.status(400).json({ error: 'Reason is required for wallet deductions' });
+        }
+
+        const user = await prisma.user.findUnique({ where: { id: parseInt(userId) } });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (user.walletBalance < parseFloat(amount)) {
+            return res.status(400).json({ error: 'Insufficient wallet balance for deduction' });
+        }
+
+        await prisma.$transaction(async (tx) => {
+            // Deduct from user wallet
+            await tx.user.update({
+                where: { id: parseInt(userId) },
+                data: { walletBalance: { decrement: parseFloat(amount) } }
+            });
+
+            // Create transaction record
+            await tx.transaction.create({
+                data: {
+                    userId: parseInt(userId),
+                    type: 'DEDUCTION',
+                    ledgerType: 'VIRTUAL',
+                    direction: 'OUT',
+                    amount: parseFloat(amount),
+                    status: 'SUCCESS',
+                    reference: `ADMIN-DEDUCT-${Date.now()}`,
+                    description: reason
+                }
+            });
+
+            // Create notification for user
+            await tx.notification.create({
+                data: {
+                    userId: parseInt(userId),
+                    type: 'SYSTEM',
+                    title: 'Wallet Deduction ⚠️',
+                    message: `₦${parseFloat(amount).toLocaleString()} has been deducted from your wallet by admin. Reason: ${reason}`
+                }
+            });
+
+            // Create audit log
+            await tx.auditLog.create({
+                data: {
+                    adminId,
+                    action: 'MANUAL_WALLET_DEDUCTION',
+                    targetUserId: parseInt(userId),
+                    details: `Deducted ₦${amount} from user wallet. Reason: ${reason}`
+                }
+            });
+        });
+
+        res.json({ message: 'User wallet deducted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to deduct from user wallet' });
+    }
+});
+
+// GET /api/admin/company-account - Get company bank account details
+router.get('/company-account', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const bankName = await prisma.systemConfig.findUnique({ where: { key: 'COMPANY_BANK_NAME' } });
+        const accountNumber = await prisma.systemConfig.findUnique({ where: { key: 'COMPANY_ACCOUNT_NUMBER' } });
+        const accountName = await prisma.systemConfig.findUnique({ where: { key: 'COMPANY_ACCOUNT_NAME' } });
+
+        res.json({
+            bankName: bankName?.value || '',
+            accountNumber: accountNumber?.value || '',
+            accountName: accountName?.value || ''
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch company account' });
+    }
+});
+
+// POST /api/admin/company-account - Update company bank account details
+router.post('/company-account', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const { bankName, accountNumber, accountName } = req.body;
+        const adminId = req.user.userId;
+
+        if (!bankName || !accountNumber || !accountName) {
+            return res.status(400).json({ error: 'All fields are required' });
+        }
+
+        await prisma.$transaction(async (tx) => {
+            // Upsert bank name
+            await tx.systemConfig.upsert({
+                where: { key: 'COMPANY_BANK_NAME' },
+                update: { value: bankName },
+                create: { key: 'COMPANY_BANK_NAME', value: bankName }
+            });
+
+            // Upsert account number
+            await tx.systemConfig.upsert({
+                where: { key: 'COMPANY_ACCOUNT_NUMBER' },
+                update: { value: accountNumber },
+                create: { key: 'COMPANY_ACCOUNT_NUMBER', value: accountNumber }
+            });
+
+            // Upsert account name
+            await tx.systemConfig.upsert({
+                where: { key: 'COMPANY_ACCOUNT_NAME' },
+                update: { value: accountName },
+                create: { key: 'COMPANY_ACCOUNT_NAME', value: accountName }
+            });
+
+            // Create audit log
+            await tx.auditLog.create({
+                data: {
+                    adminId,
+                    action: 'COMPANY_ACCOUNT_UPDATE',
+                    details: `Updated company bank account: ${bankName} - ${accountNumber} - ${accountName}`
+                }
+            });
+        });
+
+        res.json({ message: 'Company account details updated successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to update company account' });
+    }
+});
+
+// ============================================
+// PAYMENT PROOF APPROVAL SYSTEM
+// ============================================
+
+// GET /api/admin/payment-proofs - Get all pending payment proofs
+router.get('/payment-proofs', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const { status } = req.query;
+        const where = status ? { status } : {};
+
+        const proofs = await prisma.paymentProof.findMany({
+            where,
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        res.json(proofs);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch payment proofs' });
+    }
+});
+
+// POST /api/admin/payment-proofs/:id/approve - Approve payment proof
+router.post('/payment-proofs/:id/approve', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { adminNote } = req.body;
+        const adminId = req.user.userId;
+
+        const proof = await prisma.paymentProof.findUnique({
+            where: { id: parseInt(id) },
+            include: { user: true }
+        });
+
+        if (!proof) {
+            return res.status(404).json({ error: 'Payment proof not found' });
+        }
+
+        if (proof.status !== 'PENDING') {
+            return res.status(400).json({ error: 'Payment proof already processed' });
+        }
+
+        await prisma.$transaction(async (tx) => {
+            // Update payment proof status
+            await tx.paymentProof.update({
+                where: { id: parseInt(id) },
+                data: {
+                    status: 'APPROVED',
+                    adminId,
+                    adminNote: adminNote || 'Approved',
+                    processedAt: new Date()
+                }
+            });
+
+            // Check if this is an activation payment (₦3,000)
+            if (proof.amount === 3000 && proof.user.status === 'PENDING_APPROVAL') {
+                // Activate user account
+                await tx.user.update({
+                    where: { id: proof.userId },
+                    data: { status: 'ACTIVE' }
+                });
+
+                // Record activation fee transaction
+                await tx.transaction.create({
+                    data: {
+                        userId: proof.userId,
+                        amount: 3000,
+                        type: 'ONBOARDING_FEE',
+                        ledgerType: 'COMPANY',
+                        direction: 'IN',
+                        status: 'SUCCESS',
+                        reference: `ACTIVATION-${proof.userId}-${Date.now()}`,
+                        description: 'Account Activation Fee'
+                    }
+                });
+
+                // Create notification for user - account activated
+                await tx.notification.create({
+                    data: {
+                        userId: proof.userId,
+                        type: 'SYSTEM',
+                        title: 'Account Activated ✅',
+                        message: `Your activation payment has been approved! Your account is now active. You can login and start using the platform.`
+                    }
+                });
+            } else {
+                // Regular wallet funding
+                await tx.user.update({
+                    where: { id: proof.userId },
+                    data: {
+                        walletBalance: { increment: proof.amount }
+                    }
+                });
+
+                // Create transaction record
+                await tx.transaction.create({
+                    data: {
+                        userId: proof.userId,
+                        type: 'FUNDING',
+                        ledgerType: 'VIRTUAL',
+                        direction: 'IN',
+                        amount: proof.amount,
+                        status: 'SUCCESS',
+                        reference: `PROOF-${id}-${Date.now()}`,
+                        description: `Wallet Funding - Payment Proof #${id} Approved`
+                    }
+                });
+
+                // Create notification for user
+                await tx.notification.create({
+                    data: {
+                        userId: proof.userId,
+                        type: 'SYSTEM',
+                        title: 'Payment Approved ✅',
+                        message: `Your payment of ₦${proof.amount.toLocaleString()} has been approved. Your wallet has been credited.`
+                    }
+                });
+            }
+
+            // Create audit log
+            await tx.auditLog.create({
+                data: {
+                    adminId,
+                    action: proof.amount === 3000 ? 'ACTIVATION_PAYMENT_APPROVED' : 'PAYMENT_PROOF_APPROVED',
+                    targetUserId: proof.userId,
+                    details: `Approved payment proof #${id} for ₦${proof.amount}. ${adminNote || ''}`
+                }
+            });
+        });
+
+        res.json({ message: proof.amount === 3000 ? 'Activation payment approved and user account activated' : 'Payment proof approved and wallet credited' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to approve payment proof' });
+    }
+});
+
+// POST /api/admin/payment-proofs/:id/reject - Reject payment proof
+router.post('/payment-proofs/:id/reject', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { adminNote } = req.body;
+        const adminId = req.user.userId;
+
+        if (!adminNote) {
+            return res.status(400).json({ error: 'Rejection reason is required' });
+        }
+
+        const proof = await prisma.paymentProof.findUnique({
+            where: { id: parseInt(id) },
+            include: { user: true }
+        });
+
+        if (!proof) {
+            return res.status(404).json({ error: 'Payment proof not found' });
+        }
+
+        if (proof.status !== 'PENDING') {
+            return res.status(400).json({ error: 'Payment proof already processed' });
+        }
+
+        await prisma.$transaction(async (tx) => {
+            // Update payment proof status
+            await tx.paymentProof.update({
+                where: { id: parseInt(id) },
+                data: {
+                    status: 'REJECTED',
+                    adminId,
+                    adminNote,
+                    processedAt: new Date()
+                }
+            });
+
+            // Create notification for user
+            await tx.notification.create({
+                data: {
+                    userId: proof.userId,
+                    type: 'SYSTEM',
+                    title: 'Payment Rejected ❌',
+                    message: `Your payment proof for ₦${proof.amount.toLocaleString()} has been rejected. Reason: ${adminNote}`
+                }
+            });
+
+            // Create audit log
+            await tx.auditLog.create({
+                data: {
+                    adminId,
+                    action: 'PAYMENT_PROOF_REJECTED',
+                    targetUserId: proof.userId,
+                    details: `Rejected payment proof #${id} for ₦${proof.amount}. Reason: ${adminNote}`
+                }
+            });
+        });
+
+        res.json({ message: 'Payment proof rejected' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to reject payment proof' });
+    }
+});
+
+// ============================================
+// CONTRIBUTION ENFORCEMENT SYSTEM
+// ============================================
+
+// POST /api/admin/run-enforcement - Manually trigger contribution enforcement
+router.post('/run-enforcement', authenticateToken, isSuperAdmin, async (req, res) => {
+    try {
+        console.log('Manual enforcement triggered by admin:', req.user.userId);
+        const result = await enforceContributionPolicy();
+
+        // Create audit log
+        await prisma.auditLog.create({
+            data: {
+                adminId: req.user.userId,
+                action: 'MANUAL_ENFORCEMENT_RUN',
+                details: `Manually triggered contribution enforcement. Suspended: ${result.suspended}, Banned: ${result.banned}`
+            }
+        });
+
+        res.json({
+            message: 'Enforcement completed successfully',
+            ...result
+        });
+    } catch (error) {
+        console.error('Error running enforcement:', error);
+        res.status(500).json({ error: 'Failed to run enforcement' });
+    }
+});
+
+// GET /api/admin/enforcement-stats - Get enforcement statistics
+router.get('/enforcement-stats', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const stats = await getEnforcementStats();
+        res.json(stats);
+    } catch (error) {
+        console.error('Error fetching enforcement stats:', error);
+        res.status(500).json({ error: 'Failed to fetch enforcement stats' });
+    }
+});
+
+// GET /api/admin/users/:id/enforcement - Check enforcement status for a specific user
+router.get('/users/:id/enforcement', authenticateToken, anyAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const status = await checkUserEnforcement(parseInt(id));
+        res.json(status);
+    } catch (error) {
+        console.error('Error checking user enforcement:', error);
+        res.status(500).json({ error: 'Failed to check user enforcement status' });
     }
 });
 

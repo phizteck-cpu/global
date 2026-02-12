@@ -1,6 +1,5 @@
 ﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
 import api from '../../api';
 import { ShieldCheck, Lock, Mail } from 'lucide-react';
 
@@ -10,7 +9,6 @@ const AdminLogin = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
-    const { login: memberLogin } = useAuth();
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -18,21 +16,31 @@ const AdminLogin = () => {
         setLoading(true);
 
         try {
-            // Direct admin login
+            // Use admin login endpoint directly - NO AuthContext
             const res = await api.post('/admin/login', { username, password });
             
-            const token = res.data.token;
+            const token = res.data.accessToken || res.data.token;
             const userData = res.data.user;
             
+            // Verify user has admin role
+            if (!['ADMIN', 'SUPERADMIN', 'ACCOUNTANT', 'FINANCE_ADMIN', 'OPS_ADMIN', 'SUPPORT_ADMIN'].includes(userData.role)) {
+                setError('Access denied. Admin privileges required.');
+                setLoading(false);
+                return;
+            }
+            
+            // Save to localStorage
             localStorage.setItem('token', token);
             localStorage.setItem('user', JSON.stringify(userData));
             
-            // Update auth context
-            await memberLogin(username, password);
-            
+            // Navigate to admin dashboard
             navigate('/admin');
         } catch (err) {
-            setError('Login failed');
+            console.error('Login error:', err);
+            const errorMessage = err.response?.data?.message || 
+                                err.response?.data?.error || 
+                                'Login failed. Please check your credentials.';
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }

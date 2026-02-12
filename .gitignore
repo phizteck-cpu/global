@@ -36,6 +36,10 @@ backend/prisma/*.db
 prisma/*.db
 prisma/*.db-journal
 
+# Uploads (user-generated content)
+backend/uploads/
+uploads/
+
 # Logs
 logs/
 

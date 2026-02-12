@@ -4,8 +4,41 @@ import prisma from '../prisma/client.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { initializeTransaction } from '../services/paymentService.js';
 import crypto from 'crypto';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 const router = express.Router();
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = 'uploads/payment-proofs';
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueName = `proof-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
+        cb(null, uniqueName);
+    }
+});
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|pdf/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+        if (extname && mimetype) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only images (JPEG, PNG) and PDF files are allowed'));
+        }
+    }
+});
 
 // GET /api/wallet - Get Wallet Balances
 router.get('/', authenticateToken, async (req, res) => {
@@ -24,44 +57,85 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 });
 
-// POST /api/wallet/fund - Fund Wallet with Paystack
-router.post('/fund', authenticateToken, async (req, res) => {
+// GET /api/wallet/company-account - Get company bank account for deposits (public for authenticated users)
+router.get('/company-account', authenticateToken, async (req, res) => {
     try {
-        const { amount } = req.body;
+        const bankName = await prisma.systemConfig.findUnique({ where: { key: 'COMPANY_BANK_NAME' } });
+        const accountNumber = await prisma.systemConfig.findUnique({ where: { key: 'COMPANY_ACCOUNT_NUMBER' } });
+        const accountName = await prisma.systemConfig.findUnique({ where: { key: 'COMPANY_ACCOUNT_NAME' } });
+
+        res.json({
+            bankName: bankName?.value || 'Zenith Bank',
+            accountNumber: accountNumber?.value || '1010101010',
+            accountName: accountName?.value || 'ValueHills Cooperative'
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch company account' });
+    }
+});
+
+// GET /api/wallet/payment-proofs - Get user's payment proof history
+router.get('/payment-proofs', authenticateToken, async (req, res) => {
+    try {
+        const proofs = await prisma.paymentProof.findMany({
+            where: { userId: req.user.userId },
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json(proofs);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch payment proofs' });
+    }
+});
+
+// POST /api/wallet/fund - Fund Wallet with Payment Proof Upload
+router.post('/fund', authenticateToken, upload.single('proofImage'), async (req, res) => {
+    try {
+        const { amount, bankName, accountName, transactionRef } = req.body;
         const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
 
         if (!amount || amount < 100) {
-            return res.status(400).json({ error: 'Minimum funding amount is N100' });
+            return res.status(400).json({ error: 'Minimum funding amount is ₦100' });
         }
 
-        const payment = await initializeTransaction(user.email, amount, {
-            userId: user.id,
-            purpose: 'WALLET_FUNDING'
-        });
+        // Check if proof image was uploaded
+        if (!req.file) {
+            return res.status(400).json({ error: 'Payment proof image is required' });
+        }
 
-        // Log the pending transaction (VIRTUAL ledger)
-        await prisma.transaction.create({
+        const proofImageUrl = req.file.path;
+
+        // Create payment proof record
+        const paymentProof = await prisma.paymentProof.create({
             data: {
                 userId: user.id,
-                type: 'FUNDING',
-                ledgerType: 'VIRTUAL',
-                direction: 'IN',
                 amount: parseFloat(amount),
-                status: 'PENDING',
-                reference: payment.data.reference,
-                description: 'Wallet Funding via Paystack'
+                proofImageUrl,
+                bankName: bankName || null,
+                accountName: accountName || null,
+                transactionRef: transactionRef || null,
+                status: 'PENDING'
+            }
+        });
+
+        // Create notification for user
+        await prisma.notification.create({
+            data: {
+                userId: user.id,
+                type: 'SYSTEM',
+                title: 'Payment Proof Submitted',
+                message: `Your payment proof for ₦${parseFloat(amount).toLocaleString()} has been submitted and is awaiting admin approval.`
             }
         });
 
         res.json({
-            message: 'Payment initialized',
-            amount,
-            payment_url: payment.data.authorization_url,
-            reference: payment.data.reference
+            message: 'Payment proof submitted successfully. Awaiting admin approval.',
+            proofId: paymentProof.id,
+            status: 'PENDING'
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Failed to initiate funding: ' + error.message });
+        res.status(500).json({ error: 'Failed to submit payment proof: ' + error.message });
     }
 });
 

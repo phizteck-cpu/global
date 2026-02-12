@@ -10,15 +10,33 @@ const Wallet = () => {
     const [amount, setAmount] = useState('');
     const [balances, setBalances] = useState({ walletBalance: 0, contributionBalance: 0 });
 
-    // Withdrawal Details
+    // Deposit/Payment Proof Details
+    const [proofImage, setProofImage] = useState(null);
+    const [proofPreview, setProofPreview] = useState(null);
     const [bankName, setBankName] = useState('');
-    const [accountNumber, setAccountNumber] = useState('');
     const [accountName, setAccountName] = useState('');
+    const [transactionRef, setTransactionRef] = useState('');
+
+    // Withdrawal Details
+    const [withdrawBankName, setWithdrawBankName] = useState('');
+    const [accountNumber, setAccountNumber] = useState('');
+    const [withdrawAccountName, setWithdrawAccountName] = useState('');
     const [isPriority, setIsPriority] = useState(false);
     const [pin, setPin] = useState('');
 
+    // Payment proof history
+    const [paymentProofs, setPaymentProofs] = useState([]);
+    const [showHistory, setShowHistory] = useState(false);
+
     const [msg, setMsg] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Company account details
+    const [companyAccount, setCompanyAccount] = useState({
+        bankName: 'Loading...',
+        accountNumber: '...',
+        accountName: 'Loading...'
+    });
 
     useEffect(() => {
         const fetchData = async () => {
@@ -28,12 +46,28 @@ const Wallet = () => {
                     walletBalance: res.data.balance,
                     contributionBalance: res.data.lockedBalance
                 });
+
+                // Fetch payment proof history
+                const proofsRes = await axiosClient.get('/wallet/payment-proofs');
+                setPaymentProofs(proofsRes.data);
+
+                // Fetch company account details
+                const accountRes = await axiosClient.get('/wallet/company-account');
+                setCompanyAccount(accountRes.data);
             } catch (error) {
                 console.error('Failed to fetch wallet data');
             }
         };
         fetchData();
     }, []);
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setProofImage(file);
+            setProofPreview(URL.createObjectURL(file));
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -43,19 +77,50 @@ const Wallet = () => {
             if (action === 'withdraw') {
                 await axiosClient.post('/wallet/withdraw', {
                     amount: parseFloat(amount),
-                    bankName,
+                    bankName: withdrawBankName,
                     accountNumber,
-                    accountName,
+                    accountName: withdrawAccountName,
                     isPriority,
                     pin
                 });
                 setMsg('Withdrawal request submitted successfully.');
                 setAmount('');
+                // Refresh balances
+                const res = await axiosClient.get('/wallet');
+                setBalances({
+                    walletBalance: res.data.balance,
+                    contributionBalance: res.data.lockedBalance
+                });
             } else {
-                const res = await axiosClient.post('/wallet/fund', { amount: parseFloat(amount) });
-                setMsg(`Payment link generated! Please complete payment at: ${res.data.payment_url}`);
-                window.open(res.data.payment_url, '_blank');
+                // Upload payment proof
+                if (!proofImage) {
+                    setMsg('Please upload payment proof image');
+                    setLoading(false);
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('amount', parseFloat(amount));
+                formData.append('proofImage', proofImage);
+                formData.append('bankName', bankName);
+                formData.append('accountName', accountName);
+                formData.append('transactionRef', transactionRef);
+
+                const res = await axiosClient.post('/wallet/fund', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+
+                setMsg(`✅ ${res.data.message}`);
                 setAmount('');
+                setProofImage(null);
+                setProofPreview(null);
+                setBankName('');
+                setAccountName('');
+                setTransactionRef('');
+
+                // Refresh payment proofs
+                const proofsRes = await axiosClient.get('/wallet/payment-proofs');
+                setPaymentProofs(proofsRes.data);
             }
         } catch (error) {
             setMsg(error.response?.data?.error || 'Operation failed.');
@@ -125,10 +190,10 @@ const Wallet = () => {
                         {action === 'withdraw' && (
                             <>
                                 <div className="space-y-4">
-                                    <input type="text" required placeholder="Bank Name" value={bankName} onChange={(e) => setBankName(e.target.value)} className="w-full p-3 bg-background rounded-xl border border-white/10 focus:border-primary/50 text-white" />
+                                    <input type="text" required placeholder="Bank Name" value={withdrawBankName} onChange={(e) => setWithdrawBankName(e.target.value)} className="w-full p-3 bg-background rounded-xl border border-white/10 focus:border-primary/50 text-white" />
                                     <div className="grid grid-cols-2 gap-4">
                                         <input type="text" required placeholder="Account Number" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} className="w-full p-3 bg-background rounded-xl border border-white/10 focus:border-primary/50 text-white" />
-                                        <input type="text" required placeholder="Account Name" value={accountName} onChange={(e) => setAccountName(e.target.value)} className="w-full p-3 bg-background rounded-xl border border-white/10 focus:border-primary/50 text-white" />
+                                        <input type="text" required placeholder="Account Name" value={withdrawAccountName} onChange={(e) => setWithdrawAccountName(e.target.value)} className="w-full p-3 bg-background rounded-xl border border-white/10 focus:border-primary/50 text-white" />
                                     </div>
                                 </div>
 
@@ -159,22 +224,119 @@ const Wallet = () => {
                         )}
 
                         {action === 'deposit' && (
-                            <div className="bg-background p-6 rounded-xl border border-dashed border-white/10 text-center">
-                                <p className="font-bold text-noble-gray">Bank Transfer</p>
-                                <p className="font-mono text-xl my-2 select-all text-white">1010101010</p>
-                                <p className="text-sm text-noble-gray">Zenith Bank • ValueHills Coop</p>
-                                <p className="text-xs text-amber-500/80 mt-4">⚠️ Use your Name as reference</p>
-                            </div>
+                            <>
+                                <div className="bg-background p-6 rounded-xl border border-dashed border-white/10 text-center">
+                                    <p className="font-bold text-noble-gray">Bank Transfer Details</p>
+                                    <p className="font-mono text-xl my-2 select-all text-white">{companyAccount.accountNumber}</p>
+                                    <p className="text-sm text-noble-gray">{companyAccount.bankName} • {companyAccount.accountName}</p>
+                                    <p className="text-xs text-amber-500/80 mt-4">⚠️ Use your Name as reference</p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-noble-gray mb-2">Upload Payment Proof *</label>
+                                        <input
+                                            type="file"
+                                            required
+                                            accept="image/*,.pdf"
+                                            onChange={handleFileChange}
+                                            className="w-full p-3 bg-background rounded-xl border border-white/10 focus:border-primary/50 text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-white file:cursor-pointer"
+                                        />
+                                        <p className="text-xs text-noble-gray mt-1">Upload screenshot or receipt (JPG, PNG, PDF - Max 5MB)</p>
+                                    </div>
+
+                                    {proofPreview && (
+                                        <div className="relative">
+                                            <img src={proofPreview} alt="Payment Proof Preview" className="w-full h-48 object-cover rounded-xl border border-white/10" />
+                                            <button
+                                                type="button"
+                                                onClick={() => { setProofImage(null); setProofPreview(null); }}
+                                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    <input
+                                        type="text"
+                                        placeholder="Bank Name (Optional)"
+                                        value={bankName}
+                                        onChange={(e) => setBankName(e.target.value)}
+                                        className="w-full p-3 bg-background rounded-xl border border-white/10 focus:border-primary/50 text-white"
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="Account Name (Optional)"
+                                        value={accountName}
+                                        onChange={(e) => setAccountName(e.target.value)}
+                                        className="w-full p-3 bg-background rounded-xl border border-white/10 focus:border-primary/50 text-white"
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="Transaction Reference (Optional)"
+                                        value={transactionRef}
+                                        onChange={(e) => setTransactionRef(e.target.value)}
+                                        className="w-full p-3 bg-background rounded-xl border border-white/10 focus:border-primary/50 text-white"
+                                    />
+                                </div>
+
+                                <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl">
+                                    <p className="text-amber-500 font-bold text-sm">📋 Manual Approval Process</p>
+                                    <p className="text-xs text-noble-gray mt-1">Your payment will be reviewed by admin. Approval typically takes 1-24 hours.</p>
+                                </div>
+                            </>
                         )}
 
                         <button
                             type="submit"
                             disabled={loading}
                             className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-transform active:scale-95 disabled:opacity-50 ${action === 'deposit' ? 'bg-primary hover:bg-primary-dark shadow-glow' : 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600'}`}>
-                            {loading ? 'Processing...' : (action === 'deposit' ? 'I Have Paid' : (isPriority ? 'Request Priority Payout' : 'Request Standard Payout'))}
+                            {loading ? 'Processing...' : (action === 'deposit' ? 'Submit Payment Proof' : (isPriority ? 'Request Priority Payout' : 'Request Standard Payout'))}
                         </button>
                     </form>
                 </div>
+
+                {/* Payment Proof History */}
+                {paymentProofs.length > 0 && (
+                    <div className="mt-8">
+                        <button
+                            onClick={() => setShowHistory(!showHistory)}
+                            className="w-full py-3 bg-surfaceHighlight rounded-xl border border-white/5 text-white font-bold hover:bg-white/5 transition-colors flex items-center justify-between px-6"
+                        >
+                            <span>Payment History ({paymentProofs.length})</span>
+                            <span>{showHistory ? '▼' : '▶'}</span>
+                        </button>
+
+                        {showHistory && (
+                            <div className="mt-4 space-y-3">
+                                {paymentProofs.map((proof) => (
+                                    <div key={proof.id} className="bg-surfaceHighlight p-4 rounded-xl border border-white/5">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                                <p className="text-white font-bold">₦{proof.amount.toLocaleString()}</p>
+                                                <p className="text-xs text-noble-gray">{new Date(proof.createdAt).toLocaleString()}</p>
+                                            </div>
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                                proof.status === 'APPROVED' ? 'bg-green-500/20 text-green-400' :
+                                                proof.status === 'REJECTED' ? 'bg-red-500/20 text-red-400' :
+                                                'bg-amber-500/20 text-amber-400'
+                                            }`}>
+                                                {proof.status}
+                                            </span>
+                                        </div>
+                                        {proof.transactionRef && (
+                                            <p className="text-xs text-noble-gray">Ref: {proof.transactionRef}</p>
+                                        )}
+                                        {proof.adminNote && (
+                                            <p className="text-xs text-noble-gray mt-2 italic">Admin: {proof.adminNote}</p>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div >
     );

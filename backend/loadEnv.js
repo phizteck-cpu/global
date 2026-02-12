@@ -7,7 +7,7 @@ const __dirname = path.dirname(__filename);
 
 const envFile = process.env.NODE_ENV === 'test'
     ? '.env.test'
-    : (process.env.NODE_ENV === 'production' ? '.env.production' : '.env');
+    : (process.env.NODE_ENV === 'production' ? '.env.production' : '.env.local');
 
 console.log(`Loading environment from ${envFile}...`);
 dotenv.config({ path: path.resolve(__dirname, envFile) });

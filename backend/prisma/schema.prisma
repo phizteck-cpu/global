@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -72,6 +72,7 @@ model User {
   referralsReceived Referral[]     @relation("Referred")
   redemptions       Redemption[]
   notifications     Notification[]
+  paymentProofs     PaymentProof[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -87,6 +88,7 @@ model Tier {
   onboardingFee  Float  @default(3000)
   maintenanceFee Float  @default(100)
   upgradeFee     Float  @default(0)
+  durationWeeks  Int    @default(45) // Maturity period in weeks
 
   // 3.2 Rules: Tier controls eligibility ceilings only
   maxWithdrawal Float?
@@ -105,8 +107,12 @@ model Contribution {
   user        User     @relation(fields: [userId], references: [id])
   weekNumber  Int // 1 to 45
   amount      Float // Should be 1333.33 for 60k total
-  status      String   @default("PAID") // PAID, MISSED
+  status      String   @default("PAID") // PAID, MISSED, LATE
   description String?
+  weekStartDate DateTime? // Start of the contribution week (Monday)
+  weekEndDate   DateTime? // End of contribution window (Saturday)
+  paidAt        DateTime? // When payment was made
+  lateFee       Float    @default(0) // Late payment fine
   createdAt   DateTime @default(now())
 }
 
@@ -145,6 +151,26 @@ model Withdrawal {
   adminId     Int?
   processedAt DateTime?
   createdAt   DateTime  @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// PAYMENT PROOF & APPROVAL SYSTEM
+// -----------------------------------------------------------------------------
+model PaymentProof {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  user            User      @relation(fields: [userId], references: [id])
+  amount          Float
+  proofImageUrl   String // URL/path to uploaded proof image
+  bankName        String?
+  accountName     String?
+  transactionRef  String?
+  status          String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  adminId         Int?
+  adminNote       String?
+  processedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 // -----------------------------------------------------------------------------

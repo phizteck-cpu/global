@@ -20,6 +20,7 @@ import withdrawalRoutes from './routes/withdrawals.js';
 import inventoryRoutes from './routes/inventory.js';
 import cron from 'node-cron';
 import { runDailyContributions } from './services/contributionAutomation.js';
+import { enforceContributionPolicy } from './services/contributionEnforcement.js';
 import { authenticateToken, isAdmin, isSuperAdmin } from './middleware/auth.js';
 import { authRateLimiter, apiRateLimiter, adminRateLimiter } from './middleware/rateLimiter.js';
 
@@ -33,8 +34,19 @@ dotenv.config({ path: path.resolve(__dirname, envFile) });
 
 const app = express();
 
-app.use(cors({ origin: '*', credentials: true }));
+// CORS Configuration - Restrict to specific domains in production
+const corsOptions = {
+    origin: process.env.NODE_ENV === 'production' 
+        ? ['https://valuehills.shop', 'https://www.valuehills.shop', 'https://1api.valuehills.shop']
+        : '*',
+    credentials: true
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 📝 Request Logger
 app.use((req, res, next) => {
@@ -45,12 +57,24 @@ app.use((req, res, next) => {
 // ⚠️ Database Connection Guard Middleware
 app.use((req, res, next) => {
     if (app.locals.dbError) {
-        // Allow static files and health checks to pass through
-        if (req.path.startsWith('/assets') || req.path === '/health' || req.path === '/debug/db') {
+        // Allow static files, frontend assets, and API health checks
+        if (req.path.startsWith('/assets') || 
+            req.path === '/health' || 
+            req.path === '/debug/db' ||
+            req.path.startsWith('/assets/') ||
+            req.path.endsWith('.js') ||
+            req.path.endsWith('.css') ||
+            req.path.endsWith('.ico') ||
+            req.path.endsWith('.png') ||
+            req.path.endsWith('.svg') ||
+            req.path.endsWith('.jpg') ||
+            req.path === '/' ||
+            req.path === '/login' ||
+            req.path === '/signup') {
             return next();
         }
 
-        // Return 503 Service Unavailable for API requests
+        // Return 503 for API requests
         if (req.path.startsWith('/api') || req.xhr) {
             return res.status(503).json({
                 error: 'Service Unavailable',
@@ -59,19 +83,8 @@ app.use((req, res, next) => {
             });
         }
 
-        // For browser requests, we could render a nice error page or just send the error
-        // Let's send a simple HTML error page
-        return res.status(503).send(`
-            <html>
-                <body style="font-family: system-ui; padding: 2rem; text-align: center;">
-                    <h1>⚠️ Service Temporarily Unavailable</h1>
-                    <p>The application is currently experiencing technical difficulties connecting to the database.</p>
-                    <p><strong>Error:</strong> ${app.locals.dbError}</p>
-                    <p>Please try again in a few minutes.</p>
-                    <button onclick="window.location.reload()">Reload</button>
-                </body>
-            </html>
-        `);
+        // Redirect to home for browser requests
+        return res.redirect('/');
     }
     next();
 });
@@ -95,6 +108,16 @@ if (process.env.NODE_ENV !== 'test') {
     cron.schedule('0 0 * * *', () => {
         runDailyContributions();
     });
+    
+    // ⚙️ Contribution Enforcement Scheduler (Daily at 1 AM)
+    cron.schedule('0 1 * * *', async () => {
+        console.log('\n🔍 Running scheduled contribution enforcement...');
+        await enforceContributionPolicy();
+    });
+    
+    console.log('✓ Scheduled jobs initialized:');
+    console.log('  - Daily contributions: 00:00 (midnight)');
+    console.log('  - Enforcement check: 01:00 (1 AM)');
 }
 
 // 🩺 Health Check
@@ -104,6 +127,12 @@ apiRouter.get('/health', (req, res) => res.json({ status: 'up', timestamp: new D
 apiRouter.post('/admin/automation/run', authenticateToken, isSuperAdmin, async (req, res) => {
     await runDailyContributions();
     res.json({ message: 'Automation worker triggered manually' });
+});
+
+// Admin Enforcement (manual trigger)
+apiRouter.post('/admin/enforcement/run', authenticateToken, isSuperAdmin, async (req, res) => {
+    const result = await enforceContributionPolicy();
+    res.json({ message: 'Enforcement completed', ...result });
 });
 
 // API Route Mount Points (with rate limiting on auth)

@@ -7,8 +7,9 @@ const router = express.Router();
 // GET /notifications - List user's notifications
 router.get('/', authenticateToken, async (req, res) => {
     try {
+        const userId = req.user.userId || req.user.id;
         const notifications = await prisma.notification.findMany({
-            where: { userId: req.user.userId },
+            where: { userId: parseInt(userId) },
             orderBy: { createdAt: 'desc' }
         });
         res.json(notifications);
@@ -22,15 +23,15 @@ router.get('/', authenticateToken, async (req, res) => {
 router.put('/:id/read', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
-        
+
         await prisma.notification.update({
-            where: { 
+            where: {
                 id: parseInt(id),
                 userId: req.user.userId
             },
             data: { read: true }
         });
-        
+
         res.json({ message: 'Notification marked as read' });
     } catch (error) {
         console.error(error);
@@ -42,13 +43,13 @@ router.put('/:id/read', authenticateToken, async (req, res) => {
 router.put('/read-all', authenticateToken, async (req, res) => {
     try {
         await prisma.notification.updateMany({
-            where: { 
+            where: {
                 userId: req.user.userId,
                 read: false
             },
             data: { read: true }
         });
-        
+
         res.json({ message: 'All notifications marked as read' });
     } catch (error) {
         console.error(error);
@@ -60,12 +61,12 @@ router.put('/read-all', authenticateToken, async (req, res) => {
 router.get('/unread-count', authenticateToken, async (req, res) => {
     try {
         const count = await prisma.notification.count({
-            where: { 
+            where: {
                 userId: req.user.userId,
                 read: false
             }
         });
-        
+
         res.json({ unreadCount: count });
     } catch (error) {
         console.error(error);
@@ -77,14 +78,14 @@ router.get('/unread-count', authenticateToken, async (req, res) => {
 router.delete('/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
-        
+
         await prisma.notification.delete({
-            where: { 
+            where: {
                 id: parseInt(id),
                 userId: req.user.userId
             }
         });
-        
+
         res.json({ message: 'Notification deleted' });
     } catch (error) {
         console.error(error);

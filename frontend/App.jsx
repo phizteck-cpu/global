@@ -1,7 +1,10 @@
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import AdminLogin from './pages/admin/AdminLogin';
 import Dashboard from './pages/Dashboard';
 import Packages from './pages/Packages';
@@ -13,6 +16,8 @@ import AdminOverview from './pages/admin/AdminOverview';
 import AdminPackages from './pages/admin/AdminPackages';
 import AdminApprovals from './pages/admin/AdminApprovals';
 import AdminUsers from './pages/admin/AdminUsers';
+import AdminPayments from './pages/admin/AdminPayments';
+import AdminFunding from './pages/admin/AdminFunding';
 import AdminAudit from './pages/admin/AdminAudit';
 import AdminInventory from './pages/admin/AdminInventory';
 import AdminManagement from './pages/admin/AdminManagement';
@@ -36,6 +41,8 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<RedirectIfAuth><Login /></RedirectIfAuth>} />
           <Route path="/signup" element={<RedirectIfAuth><Signup /></RedirectIfAuth>} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/admin/login" element={<AdminLogin />} />
 
           {/* Member Dashboard Routes */}
@@ -51,6 +58,8 @@ function App() {
           <Route path="/admin/packages" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN', 'OPS_ADMIN']}><AdminLayout><AdminPackages /></AdminLayout></ProtectedRoute>} />
           <Route path="/admin/inventory" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN', 'OPS_ADMIN']}><AdminLayout><AdminInventory /></AdminLayout></ProtectedRoute>} />
           <Route path="/admin/approvals" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN', 'FINANCE_ADMIN']}><AdminLayout><AdminApprovals /></AdminLayout></ProtectedRoute>} />
+          <Route path="/admin/payments" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN', 'FINANCE_ADMIN']}><AdminLayout><AdminPayments /></AdminLayout></ProtectedRoute>} />
+          <Route path="/admin/funding" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN', 'FINANCE_ADMIN']}><AdminLayout><AdminFunding /></AdminLayout></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN', 'SUPPORT_ADMIN']}><AdminLayout><AdminUsers /></AdminLayout></ProtectedRoute>} />
           <Route path="/admin/audit" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN', 'SUPPORT_ADMIN']}><AdminLayout><AdminAudit /></AdminLayout></ProtectedRoute>} />
 

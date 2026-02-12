@@ -50,7 +50,8 @@ router.post('/', authenticateToken, isSuperAdmin, async (req, res) => {
                     weeklyAmount: parseFloat(weeklyAmount) || 0,
                     upgradeFee: parseFloat(upgradeFee) || 0,
                     maintenanceFee: parseFloat(maintenanceFee) || 0,
-                    onboardingFee: parseFloat(upgradeFee) || 0
+                    onboardingFee: parseFloat(upgradeFee) || 0,
+                    durationWeeks: parseInt(durationWeeks) || 45
                 }
             });
             return res.status(201).json(tier);

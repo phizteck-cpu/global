@@ -20,6 +20,7 @@ const Dashboard = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [stats, setStats] = useState(null);
+    const [weeklyStatus, setWeeklyStatus] = useState(null);
     const [loading, setLoading] = useState(true);
     const [msg, setMsg] = useState('');
 
@@ -33,6 +34,10 @@ const Dashboard = () => {
             try {
                 const res = await axiosClient.get('/dashboard/stats');
                 setStats(res.data);
+                
+                // Fetch weekly contribution status
+                const weeklyRes = await axiosClient.get('/contributions/weekly-status');
+                setWeeklyStatus(weeklyRes.data);
             } catch (error) {
                 console.error('Error fetching dashboard data:', error);
                 if (error.response?.status === 401) logout();
@@ -51,6 +56,8 @@ const Dashboard = () => {
             setMsg(res.data.message);
             const statsRes = await axiosClient.get('/dashboard/stats');
             setStats(statsRes.data);
+            const weeklyRes = await axiosClient.get('/contributions/weekly-status');
+            setWeeklyStatus(weeklyRes.data);
             setTimeout(() => setMsg(''), 5000);
         } catch (error) {
             setMsg(error.response?.data?.error || 'Payment failed');
@@ -93,7 +100,7 @@ const Dashboard = () => {
                 </div>
 
                 <div className="relative z-10 text-right space-y-2">
-                    <p className="text-[10px] uppercase tracking-[0.2em] font-black text-noble-gray">CaxiosClienttal Liquidity</p>
+                    <p className="text-[10px] uppercase tracking-[0.2em] font-black text-noble-gray">Capital Liquidity</p>
                     <h3 className="text-4xl font-black font-heading text-white tracking-tighter">₦{stats.walletBalance?.toLocaleString()}</h3>
                     <button onClick={() => navigate('/wallet')} className="text-[10px] font-black uppercase tracking-[0.2em] text-primary hover:underline flex items-center justify-end gap-2 w-full">
                         Expand Wallet <ArrowRight size={14} />
@@ -114,6 +121,55 @@ const Dashboard = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Thursday Notification Banner */}
+            {weeklyStatus && weeklyStatus.isThursday && !weeklyStatus.hasContributed && (
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-6 bg-amber-500/10 border-2 border-amber-500/30 rounded-3xl flex items-start gap-4"
+                >
+                    <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                        <AlertCircle size={24} />
+                    </div>
+                    <div className="flex-1">
+                        <h4 className="font-black text-amber-500 uppercase tracking-widest text-sm mb-2">⚠️ Contribution Reminder</h4>
+                        <p className="text-white font-bold mb-1">Your weekly contribution is due this Friday-Saturday!</p>
+                        <p className="text-noble-gray text-sm">
+                            Contribution window opens tomorrow (Friday) and closes Saturday at 11:59 PM. 
+                            <span className="text-amber-500 font-bold"> Failure to pay will attract a ₦1,000 late fee.</span>
+                        </p>
+                    </div>
+                </motion.div>
+            )}
+
+            {/* Weekly Contribution Status */}
+            {weeklyStatus && !weeklyStatus.hasContributed && !weeklyStatus.isWindowOpen && (
+                <div className="p-6 bg-white/5 border border-white/10 rounded-3xl">
+                    <div className="flex items-center gap-3 mb-3">
+                        <Clock size={20} className="text-primary" />
+                        <h4 className="font-black text-white uppercase tracking-widest text-sm">Weekly Contribution Window</h4>
+                    </div>
+                    <p className="text-noble-gray text-sm">
+                        Contribution window: <span className="text-white font-bold">Friday - Saturday</span>
+                        {weeklyStatus.daysUntilWindow > 0 && (
+                            <span className="text-primary"> • Opens in {weeklyStatus.daysUntilWindow} day{weeklyStatus.daysUntilWindow > 1 ? 's' : ''}</span>
+                        )}
+                    </p>
+                </div>
+            )}
+
+            {weeklyStatus && weeklyStatus.hasContributed && (
+                <div className="p-6 bg-green-500/10 border border-green-500/20 rounded-3xl flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center text-green-500 shrink-0">
+                        ✓
+                    </div>
+                    <div>
+                        <h4 className="font-black text-green-500 uppercase tracking-widest text-sm mb-1">Contribution Complete</h4>
+                        <p className="text-noble-gray text-sm">You have successfully contributed for this week. Next window: Friday</p>
+                    </div>
+                </div>
+            )}
 
             {/* Metrics Matrix */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -172,17 +228,37 @@ const Dashboard = () => {
                     <div className="flex items-center gap-4 bg-white/5 px-6 py-4 rounded-2xl border border-white/5">
                         <Clock size={16} className="text-primary" />
                         <div>
-                            <p className="text-[10px] uppercase font-black text-noble-gray">Next Obligation</p>
-                            <p className="text-sm font-bold text-white leading-none mt-1">Week {stats.weeksCompleted + 1}</p>
+                            <p className="text-[10px] uppercase font-black text-noble-gray">
+                                {weeklyStatus?.isWindowOpen ? 'Window Open' : 'Next Window'}
+                            </p>
+                            <p className="text-sm font-bold text-white leading-none mt-1">
+                                {weeklyStatus?.isWindowOpen ? 'Friday-Saturday' : 'Week ' + (stats.weeksCompleted + 1)}
+                            </p>
                         </div>
                     </div>
 
                     <button
                         onClick={handlePayContribution}
-                        disabled={stats.weeksCompleted >= 45 || loading}
-                        className="bg-white text-black hover:bg-primary hover:text-white px-10 py-5 rounded-[2rem] font-black uppercase tracking-tighter text-lg shadow-2xl transition-all active:scale-[0.98] disabled:opacity-30 flex items-center gap-3"
+                        disabled={
+                            stats.weeksCompleted >= (stats.totalWeeks || 45) || 
+                            loading || 
+                            !weeklyStatus?.isWindowOpen || 
+                            weeklyStatus?.hasContributed
+                        }
+                        className={`px-10 py-5 rounded-[2rem] font-black uppercase tracking-tighter text-lg shadow-2xl transition-all active:scale-[0.98] disabled:opacity-30 flex items-center gap-3 ${
+                            weeklyStatus?.isWindowOpen && !weeklyStatus?.hasContributed
+                                ? 'bg-green-600 text-white hover:bg-green-700 animate-pulse'
+                                : 'bg-white text-black hover:bg-primary hover:text-white'
+                        }`}
+                        title={
+                            !weeklyStatus?.isWindowOpen 
+                                ? 'Contribution window is closed. Opens Friday.' 
+                                : weeklyStatus?.hasContributed 
+                                ? 'Already contributed this week' 
+                                : 'Click to pay your weekly contribution'
+                        }
                     >
-                        Execute Contribution <ChevronRight size={20} />
+                        {weeklyStatus?.hasContributed ? 'Paid This Week ✓' : 'Execute Contribution'} <ChevronRight size={20} />
                     </button>
                 </div>
             </div>
@@ -192,8 +268,12 @@ const Dashboard = () => {
                     <AlertCircle size={24} />
                 </div>
                 <div className="space-y-1">
-                    <h4 className="font-black text-white uppercase tracking-widest text-[10px]">Security Briefing</h4>
-                    <p className="text-xs text-noble-gray italic leading-relaxed">Transactions are processed through the ValueHills secure cooperative ledger. Always verify your current active tier before executing caxiosClienttal transfers.</p>
+                    <h4 className="font-black text-white uppercase tracking-widest text-[10px]">Weekly Contribution Schedule</h4>
+                    <p className="text-xs text-noble-gray italic leading-relaxed">
+                        Contributions are processed weekly from <span className="text-white font-bold">Friday to Saturday</span>. 
+                        You can only contribute once per week. Thursday reminders will be sent. 
+                        <span className="text-amber-500 font-bold"> Late payments (after Saturday) attract a ₦1,000 fine.</span>
+                    </p>
                 </div>
             </div>
         </div>

@@ -12,13 +12,13 @@ import {
     Trophy,
     Shield
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminPackages = () => {
-    const [pkgForm, setPkgForm] = useState({ name: '', weeklyAmount: '', upgradeFee: '', maintenanceFee: '' });
+    const [pkgForm, setPkgForm] = useState({ name: '', weeklyAmount: '', upgradeFee: '', maintenanceFee: '', durationWeeks: '45' });
     const [tiers, setTiers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [msg, setMsg] = useState('');
+    const [deleteConfirm, setDeleteConfirm] = useState(null);
 
     useEffect(() => {
         fetchTiers();
@@ -42,14 +42,29 @@ const AdminPackages = () => {
                 name: pkgForm.name,
                 weeklyAmount: parseFloat(pkgForm.weeklyAmount),
                 upgradeFee: parseFloat(pkgForm.upgradeFee),
-                maintenanceFee: parseFloat(pkgForm.maintenanceFee) || 0
+                maintenanceFee: parseFloat(pkgForm.maintenanceFee) || 0,
+                durationWeeks: parseInt(pkgForm.durationWeeks) || 45
             });
             setMsg('Tier Architecture Updated Successfully');
-            setPkgForm({ name: '', weeklyAmount: '', upgradeFee: '', maintenanceFee: '' });
+            setPkgForm({ name: '', weeklyAmount: '', upgradeFee: '', maintenanceFee: '', durationWeeks: '45' });
             fetchTiers();
             setTimeout(() => setMsg(''), 3000);
         } catch (error) {
             setMsg('Authorization Failed: Requires Super Admin privileges.');
+        }
+    };
+
+    const handleDeleteTier = async (tierId) => {
+        try {
+            await axiosClient.delete(`/admin/packages/${tierId}`);
+            setMsg('Tier deleted successfully');
+            setDeleteConfirm(null);
+            fetchTiers();
+            setTimeout(() => setMsg(''), 3000);
+        } catch (error) {
+            const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Failed to delete tier';
+            setMsg(errorMsg);
+            setTimeout(() => setMsg(''), 5000);
         }
     };
 
@@ -131,6 +146,15 @@ const AdminPackages = () => {
                                 onChange={e => setPkgForm({ ...pkgForm, maintenanceFee: e.target.value })}
                                 placeholder="200"
                             />
+                            <ConfigInput
+                                label="Maturity Period (Weeks)"
+                                icon={<Shield size={14} />}
+                                type="number"
+                                value={pkgForm.durationWeeks}
+                                onChange={e => setPkgForm({ ...pkgForm, durationWeeks: e.target.value })}
+                                placeholder="45"
+                                helperText="Number of weeks until tier completion"
+                            />
 
                             <div className="md:col-span-2 pt-6">
                                 <button className="w-full py-5 bg-white text-black font-black uppercase tracking-tighter rounded-2xl shadow-xl hover:bg-primary hover:text-white transition-all active:scale-[0.98] flex items-center justify-center gap-3">
@@ -153,7 +177,11 @@ const AdminPackages = () => {
                                         <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-white group-hover:text-primary transition-colors border border-white/10">
                                             <Trophy size={20} />
                                         </div>
-                                        <button className="p-2 text-noble-gray hover:text-red-500 transition-colors">
+                                        <button 
+                                            onClick={() => setDeleteConfirm(tier.id)}
+                                            className="p-2 text-noble-gray hover:text-red-500 transition-colors hover:bg-red-500/10 rounded-lg"
+                                            title="Delete tier"
+                                        >
                                             <Trash2 size={16} />
                                         </button>
                                     </div>
@@ -161,11 +189,51 @@ const AdminPackages = () => {
                                     <div className="space-y-3 pt-6 border-t border-white/5">
                                         <RegistryItem label="Subscription" value={`₦${tier.weeklyAmount?.toLocaleString()}/wk`} />
                                         <RegistryItem label="Escalation" value={`₦${tier.upgradeFee?.toLocaleString()}`} />
+                                        <RegistryItem label="Duration" value={`${tier.durationWeeks || 45} weeks`} />
+                                        <RegistryItem label="Total Value" value={`₦${((tier.weeklyAmount || 0) * (tier.durationWeeks || 45)).toLocaleString()}`} />
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
+
+                    {/* Delete Confirmation Modal */}
+                    {deleteConfirm && (
+                        <div
+                            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-6"
+                            onClick={() => setDeleteConfirm(null)}
+                        >
+                            <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="bg-slate-900 border border-white/10 rounded-3xl p-8 max-w-md w-full animate-fade-in"
+                            >
+                                <div className="text-center space-y-4">
+                                    <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto">
+                                        <Trash2 className="text-red-500" size={24} />
+                                    </div>
+                                    <h5 className="text-white font-bold text-xl">Delete Tier?</h5>
+                                    <p className="text-sm text-noble-gray">
+                                        Are you sure you want to delete <span className="text-white font-bold">{tiers.find(t => t.id === deleteConfirm)?.name}</span>? 
+                                        This action cannot be undone.
+                                    </p>
+                                    <div className="flex gap-3 pt-4">
+                                        <button
+                                            onClick={() => setDeleteConfirm(null)}
+                                            className="flex-1 py-3 px-6 bg-white/5 text-white rounded-xl text-sm font-bold hover:bg-white/10 transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteTier(deleteConfirm)}
+                                            className="flex-1 py-3 px-6 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-colors"
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Governance Side Panel */}

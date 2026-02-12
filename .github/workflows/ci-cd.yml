@@ -39,21 +39,21 @@ jobs:
           cache: 'npm'
 
       - name: Install backend dependencies
-        working-directory: ./backend/server
+        working-directory: ./backend
         run: npm ci
 
       - name: Generate Prisma Client
-        working-directory: ./backend/server
+        working-directory: ./backend
         run: npx prisma generate
 
       - name: Run database migrations
-        working-directory: ./backend/server
+        working-directory: ./backend
         run: npx prisma migrate deploy
         env:
           DATABASE_URL: mysql://root:${{ secrets.MYSQL_ROOT_PASSWORD }}@localhost:3306/valuehills
 
       - name: Run backend tests
-        working-directory: ./backend/server
+        working-directory: ./backend
         run: npm test
         env:
           DATABASE_URL: mysql://root:${{ secrets.MYSQL_ROOT_PASSWORD }}@localhost:3306/valuehills
@@ -92,7 +92,7 @@ jobs:
       - name: Build and push backend Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./backend/server
+          context: ./backend
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/valuehills-backend:latest
           cache-from: type=gha

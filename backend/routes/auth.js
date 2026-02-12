@@ -2,11 +2,42 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import prisma from '../prisma/client.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 import { validateSignup } from '../middleware/validate.js';
 
 const router = express.Router();
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = 'uploads/activation-proofs';
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'activation-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image files are allowed'));
+        }
+    }
+});
 
 // Helper functions for tokens
 const generateAccessToken = (user) => {
@@ -81,43 +112,23 @@ router.post('/signup', validateSignup, async (req, res) => {
         // Generate verification token
         const verificationToken = generateVerificationToken();
 
-        // Execute in transaction
-        const user = await prisma.$transaction(async (tx) => {
-            // Create user
-            const newUser = await tx.user.create({
-                data: {
-                    firstName,
-                    lastName,
-                    email,
-                    username,
-                    phone,
-                    password: hashedPassword,
-                    status: "ACTIVE",
-                    referredBy: referrer ? referrer.id : null,
-                    tierId: selectedTier.id,
-                    verificationToken,
-                }
-            });
-
-            // 4.1 Administrative Fee System (Onboarding)
-            // Register specific tier onboarding fee
-            await tx.transaction.create({
-                data: {
-                    userId: newUser.id,
-                    amount: selectedTier.onboardingFee,
-                    type: 'ONBOARDING_FEE',
-                    ledgerType: 'COMPANY',
-                    direction: 'IN',
-                    status: 'SUCCESS',
-                    description: `Onboarding Fee for ${selectedTier.name} tier`,
-                    reference: `REG-${newUser.id}-${Date.now()}`
-                }
-            });
-
-            return newUser;
+        // Create user with PENDING_APPROVAL status
+        const user = await prisma.user.create({
+            data: {
+                firstName,
+                lastName,
+                email,
+                username,
+                phone,
+                password: hashedPassword,
+                status: "PENDING_APPROVAL", // Changed from ACTIVE
+                referredBy: referrer ? referrer.id : null,
+                tierId: selectedTier.id,
+                verificationToken,
+            }
         });
 
-        // Generate tokens
+        // Generate tokens (for uploading payment proof)
         const accessToken = generateAccessToken(user);
         const refreshToken = generateRefreshToken(user);
 
@@ -126,14 +137,6 @@ router.post('/signup', validateSignup, async (req, res) => {
             where: { id: user.id },
             data: { refreshToken }
         });
-
-        // Send verification email
-        const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/confirm-email/${verificationToken}`;
-        await sendEmail(
-            email,
-            'Email Verification',
-            `Please click the following link to verify your email: ${verifyUrl}`
-        );
 
         res.status(201).json({
             accessToken,
@@ -146,9 +149,9 @@ router.post('/signup', validateSignup, async (req, res) => {
                 lastName: user.lastName,
                 role: user.role,
                 referralCode: user.referralCode,
-                emailVerified: user.emailVerified
+                status: user.status
             },
-            message: 'Signup successful. Please check your email to verify your account.'
+            message: 'Registration successful. Please complete payment and upload proof.'
         });
     } catch (error) {
         console.error(error);
@@ -176,9 +179,21 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: 'Invalid username or password' });
         }
 
-        // Check if account is suspended
+        // Check if account is pending approval
+        if (user.status === 'PENDING_APPROVAL') {
+            return res.status(403).json({ 
+                message: 'Your account is pending admin approval. Please wait for your activation payment to be verified.',
+                status: 'PENDING_APPROVAL'
+            });
+        }
+
+        // Check if account is suspended or banned
         if (user.status === 'SUSPENDED') {
             return res.status(403).json({ message: 'Account is suspended. Please contact support.' });
+        }
+
+        if (user.status === 'BANNED') {
+            return res.status(403).json({ message: 'Account is banned. Please contact support.' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
@@ -489,6 +504,98 @@ router.post('/verify-2fa', async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Get Company Account Details (for activation payment)
+router.get('/company-account', async (req, res) => {
+    try {
+        const bankName = await prisma.systemConfig.findUnique({ where: { key: 'COMPANY_BANK_NAME' } });
+        const accountNumber = await prisma.systemConfig.findUnique({ where: { key: 'COMPANY_ACCOUNT_NUMBER' } });
+        const accountName = await prisma.systemConfig.findUnique({ where: { key: 'COMPANY_ACCOUNT_NAME' } });
+
+        res.json({
+            bankName: bankName?.value || 'Not configured',
+            accountNumber: accountNumber?.value || 'Not configured',
+            accountName: accountName?.value || 'Not configured'
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Upload Activation Payment Proof
+router.post('/upload-activation-proof', authenticateToken, upload.single('proofImage'), async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { amount, type } = req.body;
+
+        if (!req.file) {
+            return res.status(400).json({ message: 'Payment proof image is required' });
+        }
+
+        // Check if user exists and is pending approval
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (user.status !== 'PENDING_APPROVAL') {
+            return res.status(400).json({ message: 'User is not in pending approval status' });
+        }
+
+        // Check if proof already uploaded
+        const existingProof = await prisma.paymentProof.findFirst({
+            where: {
+                userId,
+                amount: 3000,
+                status: { in: ['PENDING', 'APPROVED'] }
+            }
+        });
+
+        if (existingProof) {
+            return res.status(400).json({ message: 'Activation payment proof already submitted' });
+        }
+
+        // Create payment proof record
+        const proof = await prisma.paymentProof.create({
+            data: {
+                userId,
+                amount: 3000,
+                proofImageUrl: `/uploads/activation-proofs/${req.file.filename}`,
+                status: 'PENDING'
+            }
+        });
+
+        // Create notification for admins
+        const admins = await prisma.user.findMany({
+            where: {
+                role: { in: ['ADMIN', 'SUPERADMIN'] }
+            }
+        });
+
+        for (const admin of admins) {
+            await prisma.notification.create({
+                data: {
+                    userId: admin.id,
+                    type: 'SYSTEM',
+                    title: 'New Activation Payment',
+                    message: `${user.firstName} ${user.lastName} (${user.username}) has submitted activation payment proof`
+                }
+            });
+        }
+
+        res.json({
+            message: 'Payment proof uploaded successfully. Awaiting admin approval.',
+            proof: {
+                id: proof.id,
+                status: proof.status
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error: ' + error.message });
     }
 });
 
