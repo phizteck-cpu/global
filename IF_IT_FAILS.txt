@@ -1,0 +1,124 @@
+╔═══════════════════════════════════════════════════════════╗
+║          IF SOMETHING GOES WRONG - TRY THESE              ║
+╚═══════════════════════════════════════════════════════════╝
+
+PROBLEM 1: Still getting 503 error
+───────────────────────────────────────────────────────────
+CAUSE: Variables not set or app not restarted
+
+FIX:
+1. Double-check variables are saved in Hostinger
+2. Click "Restart" button
+3. Wait 30 seconds (not just 10)
+4. Try again
+
+PROBLEM 2: "Prisma command not found"
+───────────────────────────────────────────────────────────
+CAUSE: Terminal in wrong directory
+
+FIX:
+1. In File Manager terminal, type: pwd
+2. Should show: /home/u948761456/domains/api2.valuehills.shop/public_html
+3. If not, type: cd domains/api2.valuehills.shop/public_html
+4. Try prisma commands again
+
+PROBLEM 3: "Database connection failed"
+───────────────────────────────────────────────────────────
+CAUSE: Wrong password or database doesn't exist
+
+FIX:
+1. Go to Hostinger → Databases → MySQL Databases
+2. Verify database exists: u948761456_hills
+3. Verify user exists: u948761456_value1
+4. If password wrong, reset it in Hostinger
+5. Update DB_PASSWORD or DATABASE_URL with new password
+6. Restart app
+
+PROBLEM 4: "Permission denied"
+───────────────────────────────────────────────────────────
+CAUSE: MySQL user doesn't have permissions
+
+FIX:
+1. Go to Hostinger → Databases → MySQL Databases
+2. Click on database: u948761456_hills
+3. Make sure user u948761456_value1 has ALL PRIVILEGES
+4. If not, add user to database with full permissions
+
+PROBLEM 5: Can't access File Manager Terminal
+───────────────────────────────────────────────────────────
+ALTERNATIVE: Use SSH
+
+1. Go to Hostinger → Advanced → SSH Access
+2. Enable SSH if not enabled
+3. Copy SSH command (looks like: ssh u948761456@123.45.67.89 -p 65002)
+4. Open your local terminal/command prompt
+5. Paste and run SSH command
+6. Enter password when prompted
+7. Run: cd domains/api2.valuehills.shop/public_html
+8. Run prisma commands
+
+PROBLEM 6: Prisma push fails with "table already exists"
+───────────────────────────────────────────────────────────
+CAUSE: Database has old tables
+
+FIX:
+1. Run: npx prisma db push --schema=backend/prisma/schema.prisma --accept-data-loss
+2. This will reset the database
+3. Then run: node backend/prisma/seed.js
+
+PROBLEM 7: Variables not showing up
+───────────────────────────────────────────────────────────
+CAUSE: Need to restart after adding variables
+
+FIX:
+1. After adding ALL variables, click "Save"
+2. Click "Restart" button
+3. Wait 30 seconds
+4. Variables should now be loaded
+
+PROBLEM 8: "Cannot find module @prisma/client"
+───────────────────────────────────────────────────────────
+CAUSE: Prisma client not generated
+
+FIX:
+1. Run: npx prisma generate --schema=backend/prisma/schema.prisma
+2. Wait for it to complete
+3. Run: npm install (if needed)
+4. Restart app
+
+PROBLEM 9: Still showing old error messages
+───────────────────────────────────────────────────────────
+CAUSE: Browser cache
+
+FIX:
+1. Clear browser cache: Ctrl+Shift+Delete
+2. Hard refresh: Ctrl+Shift+R
+3. Try in incognito/private window
+4. Try different browser
+
+PROBLEM 10: App logs show "DATABASE_URL not set"
+───────────────────────────────────────────────────────────
+CAUSE: Variables not loaded by app
+
+FIX:
+1. Check Hostinger → Logs to see what's happening
+2. Verify variables are in "Environment Variables" tab
+3. Try restarting app 2-3 times
+4. If using METHOD B, make sure ALL 5 variables are set
+
+═══════════════════════════════════════════════════════════
+  LAST RESORT: CHECK LOGS
+═══════════════════════════════════════════════════════════
+
+If nothing works:
+1. Go to Hostinger → Your App → Logs
+2. Look for error messages
+3. Copy the error message
+4. Tell me what it says and I'll help fix it
+
+═══════════════════════════════════════════════════════════
+
+🔧 MOST COMMON FIX: Just restart the app 2-3 times!
+
+Sometimes Hostinger needs multiple restarts to pick up
+environment variable changes.

@@ -1,0 +1,73 @@
+╔═══════════════════════════════════════════════════════════╗
+║     🎯 CHOOSE YOUR METHOD - BOTH WILL WORK!               ║
+╚═══════════════════════════════════════════════════════════╝
+
+You now have 2 ways to fix the database connection.
+Pick whichever is easier for you!
+
+═══════════════════════════════════════════════════════════
+  OPTION A: USE DATABASE_URL (RECOMMENDED)
+═══════════════════════════════════════════════════════════
+
+In Hostinger Environment Variables, set:
+
+DATABASE_URL=mysql://u948761456_value1:Ge2hilv4A27luE@localhost:3306/u948761456_hills
+
+Then restart and initialize database.
+
+═══════════════════════════════════════════════════════════
+  OPTION B: USE SEPARATE VARIABLES (NEW - EASIER!)
+═══════════════════════════════════════════════════════════
+
+In Hostinger Environment Variables, set these 5 variables:
+
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=u948761456_value1
+DB_PASSWORD=Ge2hilv4A27luE
+DB_NAME=u948761456_hills
+
+The app will automatically construct DATABASE_URL from these!
+
+Then restart and initialize database.
+
+═══════════════════════════════════════════════════════════
+  AFTER SETTING VARIABLES (EITHER METHOD)
+═══════════════════════════════════════════════════════════
+
+1. Click "Restart" in Hostinger
+
+2. Go to Files → File Manager → Terminal
+
+3. Run:
+   npx prisma generate --schema=backend/prisma/schema.prisma
+   npx prisma db push --schema=backend/prisma/schema.prisma
+   node backend/prisma/seed.js
+
+4. Click "Restart" again
+
+5. Test: https://api2.valuehills.shop/api/health
+
+═══════════════════════════════════════════════════════════
+  WHICH METHOD SHOULD YOU USE?
+═══════════════════════════════════════════════════════════
+
+OPTION A (DATABASE_URL):
+✅ One variable to set
+✅ Standard Prisma way
+⚠️ Need to format the URL correctly
+
+OPTION B (Separate variables):
+✅ Easier to read
+✅ Matches Hostinger's recommendation
+✅ No URL formatting needed
+✅ App constructs DATABASE_URL automatically
+
+BOTH WORK! Pick whichever you prefer.
+
+═══════════════════════════════════════════════════════════
+
+🎯 JUST PICK ONE METHOD AND SET THE VARIABLES IN HOSTINGER!
+
+The code is deployed and ready. It's waiting for you to set
+the database credentials in Hostinger's environment variables.
