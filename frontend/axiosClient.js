@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+const apiBaseURL = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.hostname.includes('valuehills.shop') ? 'https://api2.valuehills.shop/api' : '/api');
+
 const axiosClient = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || '/api',
+    baseURL: apiBaseURL,
 });
 
 // Add a request interceptor to attach the token
