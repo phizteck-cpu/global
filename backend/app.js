@@ -34,11 +34,31 @@ dotenv.config({ path: path.resolve(__dirname, envFile) });
 
 const app = express();
 
+// Trust proxy for correct rate limiting on Hostinger/Proxies
+app.set('trust proxy', 1);
+
+
 // CORS Configuration - Restrict to specific domains in production
 const corsOptions = {
-    origin: process.env.NODE_ENV === 'production'
-        ? ['https://valuehills.shop', 'https://www.valuehills.shop', 'https://1api.valuehills.shop', 'https://api2.valuehills.shop']
-        : '*',
+    origin: (origin, callback) => {
+        const allowedOrigins = [
+            'https://valuehills.shop',
+            'https://www.valuehills.shop',
+            'https://1api.valuehills.shop',
+            'https://api2.valuehills.shop',
+            'https://valuehills.pages.dev',
+            'http://localhost:5173'
+        ];
+
+        // Allow requests with no origin (like mobile apps or curl)
+        // or if origin matches our list, or if we're in development
+        if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+            callback(null, true);
+        } else {
+            console.warn(`CORS blocked for origin: ${origin}`);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true
 };
 

@@ -27,7 +27,8 @@ export const apiRateLimiter = rateLimit({
 // Strict rate limiter for authentication endpoints (login, signup)
 export const authRateLimiter = rateLimit({
     windowMs: parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-    max: parseInt(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS) || 5, // Only 5 attempts per 15 minutes
+    max: parseInt(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS) || 20, // Loosened from 5 to 20
+
     message: {
         error: 'Too many authentication attempts, please try again after 15 minutes.',
         retryAfter: Math.ceil((parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000) / 1000)

@@ -19,15 +19,18 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('khaki-termite
     process.env.DATABASE_URL = process.env.DATABASE_URL.replace('khaki-termite-134516.hostingersite.com', '127.0.0.1');
 }
 
+import bcrypt from 'bcryptjs';
+
 async function createSuperAdmin() {
     console.log('🔗 Connecting to database...');
 
     try {
+        const hashedPassword = await bcrypt.hash('superadmin123', 10);
         const superAdminData = {
             email: 'superadmin@valuehills.com',
             username: 'superadmin',
-            // Default: superadmin123
-            password: '$2y$10$dMH0rRdWZxMGG7lESsY.q.0/u9/KrhgVzMdHSW3baEd425sNSkyyG',
+            password: hashedPassword,
+
             firstName: 'Super',
             lastName: 'Admin',
             role: 'SUPERADMIN',
