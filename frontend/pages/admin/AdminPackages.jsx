@@ -27,7 +27,7 @@ const AdminPackages = () => {
     const fetchTiers = async () => {
         try {
             const res = await axiosClient.get('/packages');
-            setTiers(res.data);
+            setTiers(res.data.packages);
         } catch (error) {
             console.error('Failed to fetch tiers');
         } finally {

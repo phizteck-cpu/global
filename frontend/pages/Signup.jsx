@@ -30,7 +30,7 @@ const Signup = () => {
             try {
                 // Using the standard axiosClient instance
                 const res = await axiosClient.get('/packages');
-                setTiers(res.data);
+                setTiers(res.data.packages);
                 if (res.data.length > 0) {
                     setFormData(prev => ({ ...prev, tierId: res.data[0].id }));
                 }

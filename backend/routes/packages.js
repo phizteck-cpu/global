@@ -6,11 +6,10 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
     try {
-        console.log('GET /api/packages called - returning Tiers for frontend compatibility');
         const tiers = await prisma.tier.findMany({
             orderBy: { onboardingFee: 'asc' }
         });
-        res.json(tiers);
+        res.json({ packages: tiers });
     } catch (error) {
         console.error('Error in GET /api/packages:', error);
         res.status(500).json({ error: 'Failed to fetch tiers' });

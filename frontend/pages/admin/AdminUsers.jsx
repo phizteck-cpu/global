@@ -54,8 +54,8 @@ const AdminUsers = () => {
 
     const fetchTiers = async () => {
         try {
-            const res = await axiosClient.get('/packages'); // Assuming packages route returns tiers
-            setTiers(res.data);
+            const res = await axiosClient.get('/packages');
+            setTiers(res.data.packages);
         } catch (error) {
             console.error('Failed to fetch tiers');
         }
