@@ -10,9 +10,6 @@ export default defineConfig({
     outDir: '../backend/dist',
     emptyOutDir: true
   },
-  define: {
-    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || '/api')
-  },
   server: {
     port: 5173,
     proxy: {
