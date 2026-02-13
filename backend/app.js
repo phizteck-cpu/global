@@ -36,8 +36,8 @@ const app = express();
 
 // CORS Configuration - Restrict to specific domains in production
 const corsOptions = {
-    origin: process.env.NODE_ENV === 'production' 
-        ? ['https://valuehills.shop', 'https://www.valuehills.shop', 'https://1api.valuehills.shop']
+    origin: process.env.NODE_ENV === 'production'
+        ? ['https://valuehills.shop', 'https://www.valuehills.shop', 'https://1api.valuehills.shop', 'https://api2.valuehills.shop']
         : '*',
     credentials: true
 };
@@ -52,7 +52,7 @@ app.use((req, res, next) => {
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    
+
     next();
 });
 
@@ -69,8 +69,8 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
     if (app.locals.dbError) {
         // Allow static files, frontend assets, and API health checks
-        if (req.path.startsWith('/assets') || 
-            req.path === '/health' || 
+        if (req.path.startsWith('/assets') ||
+            req.path === '/health' ||
             req.path === '/debug/db' ||
             req.path.startsWith('/assets/') ||
             req.path.endsWith('.js') ||
@@ -119,13 +119,13 @@ if (process.env.NODE_ENV !== 'test') {
     cron.schedule('0 0 * * *', () => {
         runDailyContributions();
     });
-    
+
     // ⚙️ Contribution Enforcement Scheduler (Daily at 1 AM)
     cron.schedule('0 1 * * *', async () => {
         console.log('\n🔍 Running scheduled contribution enforcement...');
         await enforceContributionPolicy();
     });
-    
+
     console.log('✓ Scheduled jobs initialized:');
     console.log('  - Daily contributions: 00:00 (midnight)');
     console.log('  - Enforcement check: 01:00 (1 AM)');
@@ -254,8 +254,8 @@ if (distPath && process.env.API_ONLY !== 'true') {
 } else {
     // API-only mode - no frontend served
     app.get('/', (req, res) => {
-        res.json({ 
-            status: 'ok', 
+        res.json({
+            status: 'ok',
             message: 'Backend API is running',
             endpoints: ['/api/auth', '/api/users', '/api/wallet', '/api/dashboard', '/api/admin']
         });
