@@ -169,6 +169,16 @@ apiRouter.post('/admin/enforcement/run', authenticateToken, isSuperAdmin, async 
 // API Route Mount Points (with rate limiting on auth)
 apiRouter.use('/auth', authRateLimiter, authRoutes);
 apiRouter.use('/users', userRoutes);
+
+// Debug: Check if auth routes are reachable
+apiRouter.get('/auth/login', (req, res) => {
+    res.json({
+        message: 'Auth login endpoint is REACHABLE. Use POST to authenticate.',
+        method: req.method,
+        path: req.path
+    });
+});
+
 apiRouter.use('/wallet', walletRoutes);
 apiRouter.use('/packages', packageRoutes);
 apiRouter.use('/contributions', contributionRoutes);
@@ -196,6 +206,10 @@ apiRouter.get('/debug/paths', (req, res) => {
 
 // 1. Primary API Mount
 app.use('/api', apiRouter);
+
+// 1.5 Subdomain Support Mount (Allows api2.valuehills.shop/auth/login)
+app.use('/', apiRouter);
+
 
 // 2. Resolve Static Path
 // Check multiple locations for the frontend build
