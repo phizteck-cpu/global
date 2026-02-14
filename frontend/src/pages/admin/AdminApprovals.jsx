@@ -5,7 +5,6 @@ import {
     XCircle,
     Banknote,
     Clock,
-    User,
     ShieldCheck,
     CreditCard,
     AlertCircle,

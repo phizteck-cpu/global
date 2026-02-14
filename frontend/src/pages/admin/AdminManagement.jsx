@@ -3,12 +3,9 @@ import api from '../../api';
 import {
     ShieldAlert,
     UserPlus,
-    ShieldCheck,
-    ShieldX,
     Terminal,
     Key,
     Activity,
-    Search,
     UserCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';

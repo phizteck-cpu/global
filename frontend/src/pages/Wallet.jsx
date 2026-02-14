@@ -4,19 +4,15 @@ import api from '../api';
 import { useAuth } from '../context/AuthContext';
 
 const Wallet = () => {
-    const { user } = useAuth();
+    const { user: _user } = useAuth();
     const navigate = useNavigate();
-    const [action, setAction] = useState('deposit'); // deposit | withdraw
+    const [action, setAction] = useState('deposit');
     const [amount, setAmount] = useState('');
-    const [balances, setBalances] = useState({ walletBalance: 0, contributionBalance: 0 });
-
-    // Withdrawal Details
+    const [balances, setBalances] = useState({ walletBalance: 0, contributionBalance: 0, bvBalance: 0 });
     const [bankName, setBankName] = useState('');
     const [accountNumber, setAccountNumber] = useState('');
     const [accountName, setAccountName] = useState('');
-    const [isPriority, setIsPriority] = useState(false);
     const [pin, setPin] = useState('');
-
     const [msg, setMsg] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -25,11 +21,12 @@ const Wallet = () => {
             try {
                 const res = await api.get('/wallet');
                 setBalances({
-                    walletBalance: res.data.balance,
-                    contributionBalance: res.data.lockedBalance
+                    walletBalance: res.data.balance || 0,
+                    contributionBalance: res.data.lockedBalance || 0,
+                    bvBalance: res.data.bvBalance || 0
                 });
             } catch (error) {
-                console.error('Failed to fetch wallet data');
+                console.error('Failed to fetch wallet');
             }
         };
         fetchData();
@@ -37,146 +34,223 @@ const Wallet = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setMsg('');
         setLoading(true);
+        setMsg('');
+
         try {
-            if (action === 'withdraw') {
-                await api.post('/wallet/withdraw', {
-                    amount: parseFloat(amount),
-                    bankName,
-                    accountNumber,
-                    accountName,
-                    isPriority,
-                    pin
-                });
-                setMsg('Withdrawal request submitted successfully.');
-                setAmount('');
-            } else {
+            if (action === 'deposit') {
                 const res = await api.post('/wallet/fund', { amount: parseFloat(amount) });
-                setMsg(`Payment link generated! Please complete payment at: ${res.data.payment_url}`);
-                window.open(res.data.payment_url, '_blank');
-                setAmount('');
+                setMsg(res.data.message || 'Wallet funded successfully');
+            } else {
+                const res = await api.post('/wallet/withdraw', { 
+                    amount: parseFloat(amount), 
+                    bankName, 
+                    accountNumber, 
+                    accountName, 
+                    pin 
+                });
+                setMsg(res.data.message || 'Withdrawal requested successfully');
             }
+            const res = await api.get('/wallet');
+            setBalances({
+                walletBalance: res.data.balance || 0,
+                contributionBalance: res.data.lockedBalance || 0,
+                bvBalance: res.data.bvBalance || 0
+            });
+            setAmount('');
         } catch (error) {
-            setMsg(error.response?.data?.error || 'Operation failed.');
+            setMsg(error.response?.data?.message || error.response?.data?.error || 'Transaction failed');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="font-sans space-y-8 text-white">
-            <h2 className="text-3xl font-bold font-heading">My Wallet</h2>
+        <div style={{ color: 'white' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '10px' }}>Wallet</h2>
+            <p style={{ color: '#94a3b8', marginBottom: '30px' }}>Manage your funds and transactions.</p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
-                {/* Virtual Wallet */}
-                <div className="bg-surfaceHighlight p-8 rounded-3xl border border-white/5 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full -mr-10 -mt-10 blur-2xl group-hover:bg-primary/20 transition-all duration-500"></div>
-                    <div className="relative z-10">
-                        <p className="text-noble-gray uppercase tracking-widest text-xs mb-2">Virtual Wallet (Fees)</p>
-                        <h3 className="text-3xl font-bold font-heading">₦{balances.walletBalance?.toLocaleString()}</h3>
-                    </div>
+            {msg && (
+                <div style={{ padding: '15px', background: msg.includes('success') || msg.includes('successfully') ? 'rgba(34,211,238,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${msg.includes('success') || msg.includes('successfully') ? 'rgba(34,211,238,0.3)' : 'rgba(239,68,68,0.3)'}`, borderRadius: '10px', marginBottom: '20px', color: msg.includes('success') || msg.includes('successfully') ? '#22d3ee' : '#f87171' }}>
+                    {msg}
                 </div>
+            )}
 
-                {/* Contribution Balance */}
-                <div className="glass-card p-8 rounded-3xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-50 text-4xl grayscale">⚓</div>
-                    <div className="relative z-10">
-                        <p className="text-noble-gray uppercase tracking-widest text-xs mb-2">Cooperative Assets</p>
-                        <h3 className="text-3xl font-bold font-heading text-primary">₦{balances.contributionBalance?.toLocaleString()}</h3>
-                    </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+                <div style={{ background: 'rgba(30,41,59,0.8)', padding: '25px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Available Balance</p>
+                    <h3 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#22d3ee' }}>₦{balances.walletBalance?.toLocaleString()}</h3>
+                </div>
+                <div style={{ background: 'rgba(30,41,59,0.8)', padding: '25px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Locked Contribution</p>
+                    <h3 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#f97316' }}>₦{balances.contributionBalance?.toLocaleString()}</h3>
+                </div>
+                <div style={{ background: 'rgba(30,41,59,0.8)', padding: '25px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.2em' }}>BV Points</p>
+                    <h3 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#34d399' }}>{balances.bvBalance}</h3>
                 </div>
             </div>
 
-            <div className="max-w-2xl">
-                <div className="flex bg-surfaceHighlight p-1 rounded-2xl border border-white/5 mb-8">
+            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '30px', borderRadius: '25px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '25px' }}>
                     <button
                         onClick={() => setAction('deposit')}
-                        className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${action === 'deposit' ? 'bg-primary text-background shadow-glow' : 'text-noble-gray hover:text-white'}`}
+                        style={{
+                            flex: 1,
+                            padding: '12px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            background: action === 'deposit' ? '#22d3ee' : 'rgba(255,255,255,0.1)',
+                            color: action === 'deposit' ? '#0f172a' : '#94a3b8',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                        }}
                     >
-                        Fund Wallet
+                        Deposit
                     </button>
                     <button
                         onClick={() => setAction('withdraw')}
-                        className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${action === 'withdraw' ? 'bg-red-600 text-white shadow-lg' : 'text-noble-gray hover:text-white'}`}
+                        style={{
+                            flex: 1,
+                            padding: '12px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            background: action === 'withdraw' ? '#f97316' : 'rgba(255,255,255,0.1)',
+                            color: action === 'withdraw' ? '#0f172a' : '#94a3b8',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                        }}
                     >
-                        Withdraw Assets
+                        Withdraw
                     </button>
                 </div>
 
-                <div className="bg-surfaceHighlight rounded-3xl p-8 border border-white/5 relative overflow-hidden">
-                    {msg && <div className={`p-4 mb-6 rounded-xl text-sm border ${msg.includes('success') || msg.includes('sent') ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>{msg}</div>}
+                <form onSubmit={handleSubmit}>
+                    <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', color: '#94a3b8', fontSize: '0.9rem' }}>Amount (₦)</label>
+                        <input
+                            type="number"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            required
+                            min="100"
+                            style={{
+                                width: '100%',
+                                padding: '15px',
+                                borderRadius: '10px',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                background: 'rgba(255,255,255,0.05)',
+                                color: 'white',
+                                fontSize: '1rem'
+                            }}
+                            placeholder="Enter amount"
+                        />
+                    </div>
 
-                    <h3 className="text-xl font-bold font-heading mb-6">{action === 'deposit' ? 'Add Funds' : 'Request Payout'}</h3>
-
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div>
-                            <label className="block text-sm font-bold text-noble-gray mb-2">Amount (₦)</label>
-                            <input
-                                type="number"
-                                required
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                className="w-full p-4 bg-background rounded-xl border border-white/10 focus:outline-none focus:border-primary/50 text-white font-bold text-lg"
-                                placeholder="0.00"
-                            />
-                        </div>
-
-                        {action === 'withdraw' && (
-                            <>
-                                <div className="space-y-4">
-                                    <input type="text" required placeholder="Bank Name" value={bankName} onChange={(e) => setBankName(e.target.value)} className="w-full p-3 bg-background rounded-xl border border-white/10 focus:border-primary/50 text-white" />
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <input type="text" required placeholder="Account Number" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} className="w-full p-3 bg-background rounded-xl border border-white/10 focus:border-primary/50 text-white" />
-                                        <input type="text" required placeholder="Account Name" value={accountName} onChange={(e) => setAccountName(e.target.value)} className="w-full p-3 bg-background rounded-xl border border-white/10 focus:border-primary/50 text-white" />
-                                    </div>
-                                </div>
-
-                                <div className="p-4 rounded-xl border border-white/10 bg-background flex items-center justify-between cursor-pointer hover:border-amber-500/30 transition-colors" onClick={() => setIsPriority(!isPriority)}>
-                                    <div>
-                                        <h4 className="font-bold text-amber-500">Priority Processing ⚡</h4>
-                                        <p className="text-xs text-noble-gray">Get funds in 24hrs. 10% Service Fee applies.</p>
-                                    </div>
-                                    <div className={`w-6 h-6 rounded-full border flex items-center justify-center ${isPriority ? 'bg-amber-500 border-amber-500' : 'border-noble-gray'}`}>
-                                        {isPriority && <span className="text-black text-xs">✓</span>}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-bold text-noble-gray mb-2">Security PIN</label>
-                                    <input
-                                        type="password"
-                                        required
-                                        maxLength={6}
-                                        value={pin}
-                                        onChange={(e) => setPin(e.target.value)}
-                                        className="w-full p-4 bg-background rounded-xl border border-white/10 focus:border-secondary/50 text-white font-mono tracking-widest text-center text-lg"
-                                        placeholder="••••••"
-                                    />
-                                    <p className="text-[10px] text-center text-noble-gray">Enter your 4-6 digit transaction PIN</p>
-                                </div>
-                            </>
-                        )}
-
-                        {action === 'deposit' && (
-                            <div className="bg-background p-6 rounded-xl border border-dashed border-white/10 text-center">
-                                <p className="font-bold text-noble-gray">Bank Transfer</p>
-                                <p className="font-mono text-xl my-2 select-all text-white">1010101010</p>
-                                <p className="text-sm text-noble-gray">Zenith Bank • ValueHills Coop</p>
-                                <p className="text-xs text-amber-500/80 mt-4">⚠️ Use your Name as reference</p>
+                    {action === 'withdraw' && (
+                        <>
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '8px', color: '#94a3b8', fontSize: '0.9rem' }}>Bank Name</label>
+                                <input
+                                    type="text"
+                                    value={bankName}
+                                    onChange={(e) => setBankName(e.target.value)}
+                                    required
+                                    style={{
+                                        width: '100%',
+                                        padding: '15px',
+                                        borderRadius: '10px',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        color: 'white',
+                                        fontSize: '1rem'
+                                    }}
+                                    placeholder="e.g., Zenith Bank"
+                                />
                             </div>
-                        )}
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '8px', color: '#94a3b8', fontSize: '0.9rem' }}>Account Number</label>
+                                <input
+                                    type="text"
+                                    value={accountNumber}
+                                    onChange={(e) => setAccountNumber(e.target.value)}
+                                    required
+                                    maxLength="10"
+                                    style={{
+                                        width: '100%',
+                                        padding: '15px',
+                                        borderRadius: '10px',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        color: 'white',
+                                        fontSize: '1rem'
+                                    }}
+                                    placeholder="10-digit account number"
+                                />
+                            </div>
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '8px', color: '#94a3b8', fontSize: '0.9rem' }}>Account Name</label>
+                                <input
+                                    type="text"
+                                    value={accountName}
+                                    onChange={(e) => setAccountName(e.target.value)}
+                                    required
+                                    style={{
+                                        width: '100%',
+                                        padding: '15px',
+                                        borderRadius: '10px',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        color: 'white',
+                                        fontSize: '1rem'
+                                    }}
+                                    placeholder="Account holder name"
+                                />
+                            </div>
+                            <div style={{ marginBottom: '20px' }}>
+                                <label style={{ display: 'block', marginBottom: '8px', color: '#94a3b8', fontSize: '0.9rem' }}>Transaction PIN</label>
+                                <input
+                                    type="password"
+                                    value={pin}
+                                    onChange={(e) => setPin(e.target.value)}
+                                    required
+                                    maxLength="6"
+                                    style={{
+                                        width: '100%',
+                                        padding: '15px',
+                                        borderRadius: '10px',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        color: 'white',
+                                        fontSize: '1rem'
+                                    }}
+                                    placeholder="4-6 digit PIN"
+                                />
+                            </div>
+                        </>
+                    )}
 
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-transform active:scale-95 disabled:opacity-50 ${action === 'deposit' ? 'bg-primary hover:bg-primary-dark shadow-glow' : 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600'}`}>
-                            {loading ? 'Processing...' : (action === 'deposit' ? 'I Have Paid' : (isPriority ? 'Request Priority Payout' : 'Request Standard Payout'))}
-                        </button>
-                    </form>
-                </div>
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        style={{
+                            width: '100%',
+                            padding: '15px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            background: action === 'deposit' ? '#22d3ee' : '#f97316',
+                            color: '#0f172a',
+                            fontWeight: 'bold',
+                            fontSize: '1rem',
+                            cursor: loading ? 'not-allowed' : 'pointer',
+                            opacity: loading ? 0.7 : 1
+                        }}
+                    >
+                        {loading ? 'Processing...' : action === 'deposit' ? 'Fund Wallet' : 'Request Withdrawal'}
+                    </button>
+                </form>
             </div>
-        </div >
+        </div>
     );
 };
 

@@ -41,8 +41,10 @@ model User {
   lockUntil DateTime? // Set to 7 months after registration/completion
 
   // Referral Tracking
-  referralCode String @unique @default(uuid())
-  referredBy   Int?
+  referralCode        String @unique @default(uuid())
+  referredBy          Int?
+  referredByCode      String? // Code of the user who referred this user
+  qualificationStatus String @default("PENDING") // PENDING, QUALIFIED, DISQUALIFIED
 
   // Security & Verification Fields
   emailVerified        Boolean   @default(false)

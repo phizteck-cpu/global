@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
-import { Users, Clock, CheckCircle2, Gift, Link as LinkIcon } from 'lucide-react';
 
 const Network = () => {
     const { user } = useAuth();
@@ -16,7 +15,7 @@ const Network = () => {
                     api.get('/referrals'),
                     api.get('/referrals/stats')
                 ]);
-                setReferrals(refRes.data);
+                setReferrals(refRes.data || []);
                 setStats(statsRes.data);
             } catch (error) {
                 console.error('Failed to fetch network data');
@@ -27,110 +26,128 @@ const Network = () => {
         fetchData();
     }, []);
 
-    if (loading) return <div className="p-8 text-center text-noble-gray">Loading Network...</div>;
+    if (loading) {
+        return (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                Loading Network...
+            </div>
+        );
+    }
 
     const referralLink = `${window.location.origin}/signup?ref=${user?.referralCode || 'CODE'}`;
 
     return (
-        <div className="font-sans space-y-8 text-white">
-            <h2 className="text-3xl font-bold font-heading">My Network</h2>
-            <p className="text-noble-gray">Build your community and earn rewards for every active member you refer.</p>
+        <div style={{ color: 'white' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '10px' }}>My Network</h2>
+            <p style={{ color: '#94a3b8', marginBottom: '30px' }}>Build your community and earn rewards for every active member you refer.</p>
 
-            {/* Referrer Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <StatBox title="Total Members" value={stats?.totalReferrals || 0} icon={Users} />
-                <StatBox title="Pending" value={stats?.pendingReferrals || 0} icon={Clock} color="text-secondary" />
-                <StatBox title="Active (Paid)" value={stats?.paidReferrals || 0} icon={CheckCircle2} color="text-primary" />
-                <StatBox title="Total Rewards" value={`?${(stats?.totalBonusEarned || 0).toLocaleString()}`} icon={Gift} />
-            </div>
-
-            {/* Referral Table */}
-            <div className="bg-surfaceHighlight rounded-3xl border border-white/5 overflow-hidden">
-                <div className="p-6 border-b border-white/5">
-                    <h3 className="text-xl font-bold">Referral History</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px', marginBottom: '40px' }}>
+                <div style={{ background: 'rgba(30,41,59,0.8)', padding: '20px', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase' }}>Total Referrals</p>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: '900' }}>{stats?.totalReferrals || 0}</h3>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-black/20 uppercase text-xs tracking-wider text-noble-gray">
-                            <tr>
-                                <th className="px-6 py-4">Member Name</th>
-                                <th className="px-6 py-4">Signed Up</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4 text-right">Potential Bonus</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {referrals.map((ref) => (
-                                <tr key={ref.id} className="hover:bg-white/5 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className="font-bold text-white">{ref.refereeUser.firstName} {ref.refereeUser.lastName}</div>
-                                        <div className="text-xs text-noble-gray">{ref.refereeUser.email}</div>
-                                    </td>
-                                    <td className="px-6 py-4 text-noble-gray">
-                                        {new Date(ref.createdAt).toLocaleDateString()}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-2 py-1 rounded text-[10px] font-bold ${ref.status === 'PAID' ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'
-                                            }`}>
-                                            {ref.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right font-mono font-bold text-primary">
-                                        ?500.00
-                                    </td>
-                                </tr>
-                            ))}
-                            {referrals.length === 0 && (
-                                <tr>
-                                    <td colSpan="4" className="px-6 py-12 text-center text-noble-gray italic">
-                                        No referrals yet. Spread the word to start earning!
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                <div style={{ background: 'rgba(30,41,59,0.8)', padding: '20px', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase' }}>Pending</p>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#f97316' }}>{stats?.pendingReferrals || 0}</h3>
+                </div>
+                <div style={{ background: 'rgba(30,41,59,0.8)', padding: '20px', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase' }}>Active</p>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#22d3ee' }}>{stats?.activeReferrals || 0}</h3>
+                </div>
+                <div style={{ background: 'rgba(30,41,59,0.8)', padding: '20px', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase' }}>Total Earned</p>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#34d399' }}>₦{stats?.totalBonusEarned?.toLocaleString() || 0}</h3>
                 </div>
             </div>
 
-            {/* Referral Link Tool */}
-            <div className="bg-gradient-to-br from-primary/20 to-transparent p-8 rounded-3xl border border-primary/20">
-                <h3 className="text-xl font-bold mb-2">Invite Others</h3>
-                <p className="text-noble-gray text-sm mb-6">Earn ?500 bonus for every friend who completes their first contribution.</p>
-                <div className="flex gap-4">
-                    <div className="flex-1 relative">
-                        <LinkIcon size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" />
-                        <input
-                            type="text"
-                            readOnly
-                            value={referralLink}
-                            className="w-full p-3 pl-10 bg-black/40 rounded-xl border border-white/10 text-primary font-bold font-mono"
-                        />
-                    </div>
+            <div style={{ background: 'rgba(30,41,59,0.8)', padding: '25px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)', marginBottom: '30px' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '15px' }}>Your Referral Link</h3>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <input
+                        type="text"
+                        value={referralLink}
+                        readOnly
+                        style={{
+                            flex: 1,
+                            padding: '12px 15px',
+                            borderRadius: '10px',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            background: 'rgba(0,0,0,0.3)',
+                            color: '#94a3b8',
+                            fontSize: '0.9rem'
+                        }}
+                    />
                     <button
                         onClick={() => {
                             navigator.clipboard.writeText(referralLink);
-                            alert('Referral Link Copied!');
+                            alert('Link copied!');
                         }}
-                        className="px-6 py-3 bg-primary text-background font-bold rounded-xl active:scale-95 transition-transform"
+                        style={{
+                            padding: '12px 20px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            background: '#22d3ee',
+                            color: '#0f172a',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                        }}
                     >
-                        Copy Link
+                        Copy
                     </button>
                 </div>
+            </div>
+
+            <div style={{ background: 'rgba(30,41,59,0.8)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Referral History</h3>
+                </div>
+                
+                {(!referrals || referrals.length === 0) ? (
+                    <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                        No referrals yet. Share your link to invite members!
+                    </div>
+                ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead style={{ background: 'rgba(0,0,0,0.2)' }}>
+                            <tr>
+                                <th style={{ padding: '15px', textAlign: 'left', color: '#94a3b8', fontSize: '0.8rem' }}>Member</th>
+                                <th style={{ padding: '15px', textAlign: 'left', color: '#94a3b8', fontSize: '0.8rem' }}>Joined</th>
+                                <th style={{ padding: '15px', textAlign: 'left', color: '#94a3b8', fontSize: '0.8rem' }}>Status</th>
+                                <th style={{ padding: '15px', textAlign: 'right', color: '#94a3b8', fontSize: '0.8rem' }}>Bonus</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {referrals.map((ref) => (
+                                <tr key={ref.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <td style={{ padding: '15px' }}>
+                                        <div style={{ fontWeight: 'bold' }}>{ref.referred?.firstName} {ref.referred?.lastName}</div>
+                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{ref.referred?.email}</div>
+                                    </td>
+                                    <td style={{ padding: '15px', color: '#94a3b8' }}>
+                                        {new Date(ref.createdAt).toLocaleDateString()}
+                                    </td>
+                                    <td style={{ padding: '15px' }}>
+                                        <span style={{ 
+                                            padding: '5px 10px', 
+                                            borderRadius: '5px', 
+                                            fontSize: '0.7rem',
+                                            background: ref.status === 'PAID' ? 'rgba(52,211,153,0.2)' : 'rgba(245,158,11,0.2)',
+                                            color: ref.status === 'PAID' ? '#34d399' : '#f59e0b'
+                                        }}>
+                                            {ref.status}
+                                        </span>
+                                    </td>
+                                    <td style={{ padding: '15px', textAlign: 'right', color: '#22d3ee', fontWeight: 'bold' }}>
+                                        ₦500
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
             </div>
         </div>
     );
 };
-
-const StatBox = ({ title, value, icon: Icon, color = 'text-white' }) => (
-    <div className="bg-surfaceHighlight p-6 rounded-2xl border border-white/5">
-        <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
-                <Icon size={18} className={color} />
-            </div>
-            <span className="text-xs text-noble-gray font-bold uppercase tracking-widest">{title}</span>
-        </div>
-        <div className={`text-2xl font-bold ${color}`}>{value}</div>
-    </div>
-);
 
 export default Network;

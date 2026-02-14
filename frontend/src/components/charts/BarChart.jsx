@@ -11,7 +11,6 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import { clsx } from 'clsx';
 
 const CustomTooltip = ({ active, payload, label, formatter }) => {
   if (!active || !payload || !payload.length) return null;
@@ -43,7 +42,7 @@ const BarChartComponent = ({
   showTooltip = true,
   animate = true,
   layout = 'vertical',
-  barSize = 20,
+  barSize: _barSize,
   className,
 }) => {
   const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];

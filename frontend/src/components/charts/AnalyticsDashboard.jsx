@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Users, DollarSign, Package, Activity } from 'lucide-react';
-import { LineChart, AreaChart, BarChart, PieChart, DonutChart } from './index';
+import { LineChart, AreaChart, BarChart, DonutChart } from './index';
 import { clsx } from 'clsx';
 
 // Stat Card Component
@@ -214,9 +214,9 @@ export const QuickStats = ({ stats = {} }) => {
 
 // Main Analytics Dashboard
 const AnalyticsDashboard = ({
-  loading = false,
+  loading: _loading,
   period = 'weekly',
-  onPeriodChange,
+  onPeriodChange: _onPeriodChange,
   stats = {},
   memberGrowthData = [],
   revenueData = [],

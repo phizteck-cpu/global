@@ -2,19 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
-import {
-    Zap,
-    Anchor,
-    Clock,
-    Shield,
-    ArrowRight,
-    ChevronRight,
-    AlertCircle,
-    Activity,
-    TrendingUp,
-    Lock
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 const Dashboard = () => {
     const { user, logout } = useAuth();
@@ -59,164 +46,98 @@ const Dashboard = () => {
         }
     };
 
-    if (loading && !stats) return (
-        <div className="flex h-[80vh] items-center justify-center">
-            <div className="text-center">
-                <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-                <p className="text-primary font-black uppercase tracking-[0.3em] animate-pulse">Synchronizing Ledger...</p>
+    if (loading && !stats) {
+        return (
+            <div style={{ display: 'flex', height: '80vh', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ width: '60px', height: '60px', border: '4px solid #22d3ee', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 20px' }} />
+                    <p style={{ color: '#22d3ee', fontWeight: 'bold', letterSpacing: '0.3em', textTransform: 'uppercase' }}>Loading...</p>
+                </div>
             </div>
-        </div>
-    );
+        );
+    }
 
     if (!stats) return null;
 
     return (
-        <div className="space-y-10 animate-fade-in pb-20">
-            {/* Command Header */}
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 bg-gradient-to-br from-surface to-background p-10 rounded-[3rem] border border-white/5 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full blur-[100px] -z-0 translate-x-1/2 -translate-y-1/2"></div>
-                <div className="relative z-10 space-y-4">
-                    <div className="flex items-center gap-3 text-primary">
-                        <Zap size={18} />
-                        <span className="text-[10px] uppercase tracking-[0.4em] font-black">Control Terminal v3.2</span>
-                    </div>
+        <div style={{ paddingBottom: '80px' }}>
+            {msg && (
+                <div style={{ padding: '15px', background: 'rgba(34, 211, 238, 0.1)', border: '1px solid rgba(34, 211, 238, 0.3)', borderRadius: '10px', color: '#22d3ee', marginBottom: '20px' }}>
+                    {msg}
+                </div>
+            )}
+
+            <div style={{ background: 'linear-gradient(to bottom right, rgba(30,41,59,0.8), #0f172a)', padding: '40px', borderRadius: '40px', border: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: 0, right: 0, width: '300px', height: '300px', background: 'rgba(34, 211, 238, 0.05)', borderRadius: '50%', filter: 'blur(80px)' }}></div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '20px' }}>
                     <div>
-                        <h2 className="text-5xl font-black font-heading text-white tracking-tighter leading-none mb-2">
-                            Welcome, <span className="text-gradient-gold">{user?.firstName}</span>
+                        <h2 style={{ fontSize: '2.5rem', fontWeight: '900', color: 'white', marginBottom: '10px' }}>
+                            Welcome, <span style={{ color: '#f97316' }}>{user?.firstName}</span>
                         </h2>
-                        <div className="flex items-center gap-4">
-                            <p className="text-noble-gray font-mono text-xs tracking-widest uppercase">Member ID: {stats.memberId}</p>
-                            <span className="w-1 h-1 bg-noble-gray rounded-full opacity-30"></span>
-                            <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase text-white tracking-widest">{stats.tier} Tier</span>
-                        </div>
+                        <p style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Member ID: {stats.memberId}</p>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                        <p style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Wallet Balance</p>
+                        <h3 style={{ fontSize: '2rem', fontWeight: '900', color: 'white' }}>₦{stats.walletBalance?.toLocaleString()}</h3>
                     </div>
                 </div>
+            </div>
 
-                <div className="relative z-10 text-right space-y-2">
-                    <p className="text-[10px] uppercase tracking-[0.2em] font-black text-noble-gray">Capital Liquidity</p>
-                    <h3 className="text-4xl font-black font-heading text-white tracking-tighter">₦{stats.walletBalance?.toLocaleString()}</h3>
-                    <button onClick={() => navigate('/wallet')} className="text-[10px] font-black uppercase tracking-[0.2em] text-primary hover:underline flex items-center justify-end gap-2 w-full">
-                        Expand Wallet <ArrowRight size={14} />
-                    </button>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginTop: '30px' }}>
+                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '25px', borderRadius: '25px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Contribution Balance</p>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#22d3ee' }}>₦{stats.contributionBalance?.toLocaleString()}</h3>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '25px', borderRadius: '25px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Business Volume</p>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#f59e0b' }}>{stats.bvBalance}</h3>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '25px', borderRadius: '25px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <p style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Tier Status</p>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: '900', color: stats.eligibilityStatus === 'ELIGIBLE' ? '#34d399' : '#f87171' }}>{stats.tier}</h3>
                 </div>
             </div>
 
-            <AnimatePresence>
-                {msg && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="p-4 bg-primary/10 border border-primary/20 text-primary rounded-2xl text-sm font-bold flex items-center gap-3 backdrop-blur-md"
-                    >
-                        <AlertCircle size={18} />
-                        {msg}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Metrics Matrix */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <DashboardStat
-                    label="Secured Assets"
-                    value={`₦${stats.contributionBalance?.toLocaleString()}`}
-                    icon={<Anchor size={20} />}
-                    sub="Total Cumulative Contribution"
-                    color="text-primary"
-                />
-                <DashboardStat
-                    label="Business Volume"
-                    value={stats.bvBalance}
-                    icon={<Activity size={20} />}
-                    sub="Activity Influence Points"
-                    color="text-amber-500"
-                />
-                <DashboardStat
-                    label="Verification Protocol"
-                    value={stats.eligibilityStatus}
-                    icon={stats.eligibilityStatus === 'ELIGIBLE' ? <Shield size={20} /> : <Lock size={20} />}
-                    sub={stats.daysRemainingInLock > 0 ? `Lock release in ${stats.daysRemainingInLock} days` : "Institutional Vested Status"}
-                    color={stats.eligibilityStatus === 'ELIGIBLE' ? 'text-emerald-400' : 'text-red-500'}
-                />
-            </div>
-
-            {/* Contribution Progress Control */}
-            <div className="glass-card p-10 rounded-[3rem] border-white/5 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:opacity-10 transition-opacity">
-                    <TrendingUp size={120} className="text-white" />
-                </div>
-
-                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 relative z-10 mb-10">
+            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '30px', borderRadius: '30px', marginTop: '30px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <div>
-                        <h3 className="text-2xl font-black font-heading text-white tracking-tight">Active Contribution Cycle</h3>
-                        <p className="text-xs text-noble-gray uppercase tracking-widest font-bold mt-1">45-Week Institutional Program</p>
+                        <h3 style={{ fontSize: '1.3rem', fontWeight: 'bold', color: 'white' }}>Active Contribution Cycle</h3>
+                        <p style={{ color: '#94a3b8', fontSize: '0.8rem' }}>45-Week Program</p>
                     </div>
-                    <div className="text-right">
-                        <span className="text-4xl font-black font-heading text-white">{stats.weeksCompleted}</span>
-                        <span className="text-noble-gray font-black text-xl ml-2">/ {stats.totalWeeks} Weeks</span>
+                    <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: '2rem', fontWeight: '900', color: 'white' }}>{stats.weeksCompleted}</span>
+                        <span style={{ color: '#94a3b8', fontWeight: 'bold', marginLeft: '5px' }}>/ {stats.totalWeeks} Weeks</span>
                     </div>
                 </div>
 
-                <div className="relative h-4 bg-white/5 rounded-full overflow-hidden mb-12 border border-white/5">
-                    <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(stats.weeksCompleted / stats.totalWeeks) * 100}%` }}
-                        transition={{ duration: 1.5, ease: "easeOut" }}
-                        className="h-full bg-gradient-to-r from-primary to-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.4)] relative"
-                    >
-                        <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
-                    </motion.div>
+                <div style={{ height: '15px', background: 'rgba(255,255,255,0.1)', borderRadius: '10px', overflow: 'hidden', marginBottom: '25px' }}>
+                    <div style={{ height: '100%', width: `${(stats.weeksCompleted / stats.totalWeeks) * 100}%`, background: 'linear-gradient(to right, #22d3ee, #34d399)', borderRadius: '10px', transition: 'width 1.5s ease' }}></div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-6 relative z-10">
-                    <div className="flex items-center gap-4 bg-white/5 px-6 py-4 rounded-2xl border border-white/5">
-                        <Clock size={16} className="text-primary" />
-                        <div>
-                            <p className="text-[10px] uppercase font-black text-noble-gray">Next Obligation</p>
-                            <p className="text-sm font-bold text-white leading-none mt-1">Week {stats.weeksCompleted + 1}</p>
-                        </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.05)', padding: '12px 20px', borderRadius: '15px' }}>
+                        <span style={{ color: '#22d3ee' }}>Week {stats.weeksCompleted + 1}</span>
                     </div>
-
                     <button
                         onClick={handlePayContribution}
                         disabled={stats.weeksCompleted >= 45 || loading}
-                        className="bg-primary text-background hover:bg-primary-light px-10 py-5 rounded-[2rem] font-black uppercase tracking-tighter text-lg shadow-2xl transition-all active:scale-[0.98] disabled:opacity-30 flex items-center gap-3"
+                        style={{
+                            background: stats.weeksCompleted >= 45 ? 'rgba(255,255,255,0.1)' : '#22d3ee',
+                            color: stats.weeksCompleted >= 45 ? '#94a3b8' : '#0f172a',
+                            padding: '15px 30px',
+                            borderRadius: '20px',
+                            fontWeight: 'bold',
+                            border: 'none',
+                            cursor: stats.weeksCompleted >= 45 ? 'not-allowed' : 'pointer'
+                        }}
                     >
-                        Execute Contribution <ChevronRight size={20} />
+                        {loading ? 'Processing...' : 'Pay Contribution'}
                     </button>
-                </div>
-            </div>
-
-            <div className="p-8 bg-white/[0.02] border border-white/5 rounded-[2.5rem] flex items-start gap-6">
-                <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
-                    <AlertCircle size={24} />
-                </div>
-                <div className="space-y-1">
-                    <h4 className="font-black text-white uppercase tracking-widest text-[10px]">Security Briefing</h4>
-                    <p className="text-xs text-noble-gray italic leading-relaxed">Transactions are processed through the ValueHills secure cooperative ledger. Always verify your current active tier before executing capital transfers.</p>
                 </div>
             </div>
         </div>
     );
 };
-
-const DashboardStat = ({ label, value, icon, sub, color }) => (
-    <motion.div
-        whileHover={{ y: -5 }}
-        className="glass-card p-8 rounded-[2.5rem] border-white/5 group relative overflow-hidden"
-    >
-        <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
-            {icon}
-        </div>
-        <div className="relative z-10">
-            <div className={`w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-6 ${color}`}>
-                {icon}
-            </div>
-            <p className="text-[10px] uppercase tracking-[0.2em] font-black text-noble-gray mb-1">{label}</p>
-            <h3 className={`text-3xl font-black font-heading tracking-tighter mb-2 ${color === 'text-white' ? 'text-white' : ''}`}>{value}</h3>
-            <p className="text-[10px] text-noble-gray font-medium italic">{sub}</p>
-        </div>
-    </motion.div>
-);
 
 export default Dashboard;

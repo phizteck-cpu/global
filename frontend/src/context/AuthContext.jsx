@@ -29,7 +29,15 @@ export const AuthProvider = ({ children }) => {
                 res = await api.post('/admin/login', { username, password });
             }
             
-            const token = res.data.accessToken || res.data.token || res.data;
+            // Check if response indicates success
+            const token = res.data.accessToken || res.data.token;
+            if (!token) {
+                return {
+                    success: false,
+                    message: res.data.message || 'Login failed. Please try again.'
+                };
+            }
+            
             const userData = res.data.user || { 
                 id: res.data.userId || res.data.id,
                 role: res.data.role,

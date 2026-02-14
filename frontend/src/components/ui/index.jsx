@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
 import { Loader2 } from 'lucide-react';
+import DataTable from './DataTable';
 
 // Button Component
 const Button = React.forwardRef(

@@ -2,20 +2,15 @@ import React, { useState, useEffect } from 'react';
 import api from '../../api';
 import {
     Users,
-    Shield,
     Wallet,
     Activity,
     Search,
     ChevronRight,
     UserCheck,
-    MoreVertical,
+    UserX,
     X,
     ShieldCheck,
-    UserX,
-    UserMinus,
     ArrowUpCircle,
-    Calendar,
-    Globe,
     Terminal,
     Fingerprint
 } from 'lucide-react';

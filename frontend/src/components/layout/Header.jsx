@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Search, Menu } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../api';
 
 const Header = ({ toggleSidebar }) => {
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
     const navigate = useNavigate();
     const [notifications, setNotifications] = useState([]);
     const [showNotifications, setShowNotifications] = useState(false);
@@ -15,7 +13,7 @@ const Header = ({ toggleSidebar }) => {
         const fetchNotifications = async () => {
             try {
                 const res = await api.get('/notifications');
-                setNotifications(res.data);
+                setNotifications(res.data || []);
             } catch (error) {
                 console.error('Failed to fetch notifications');
             }
@@ -26,83 +24,159 @@ const Header = ({ toggleSidebar }) => {
     const initials = (user?.firstName?.[0] || 'U') + (user?.lastName?.[0] || '');
 
     return (
-        <header className="sticky top-0 z-30 h-20 px-6 nav-blur border-b border-white/5 bg-background/80 backdrop-blur-md flex items-center justify-between text-white">
-            <div className="flex items-center gap-4">
+        <header style={{
+            position: 'sticky',
+            top: 0,
+            height: '70px',
+            background: 'rgba(15,23,42,0.9)',
+            borderBottom: '1px solid rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 25px',
+            zIndex: 30
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                 <button
                     onClick={toggleSidebar}
-                    className="p-2 lg:hidden text-noble-gray hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                    style={{
+                        display: 'none',
+                        padding: '8px',
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#94a3b8',
+                        cursor: 'pointer'
+                    }}
+                    className="mobile-menu-btn"
                 >
-                    <Menu size={24} />
+                    ☰
                 </button>
 
-                <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10 focus-within:border-primary/30 transition-colors w-64">
-                    <Search size={18} className="text-noble-gray" />
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 15px',
+                    background: 'rgba(255,255,255,0.05)',
+                    borderRadius: '25px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    width: '250px'
+                }}>
+                    <span style={{ color: '#94a3b8' }}>🔍</span>
                     <input
                         type="text"
                         placeholder="Quick search..."
-                        className="bg-transparent border-none outline-none text-sm text-white placeholder-noble-gray w-full"
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            outline: 'none',
+                            color: 'white',
+                            width: '100%',
+                            fontSize: '0.9rem'
+                        }}
                     />
                 </div>
             </div>
 
-            <div className="flex items-center gap-6">
-                <div className="relative">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                <div style={{ position: 'relative' }}>
                     <button
                         onClick={() => setShowNotifications(!showNotifications)}
-                        className="p-2 text-noble-gray hover:text-primary transition-colors relative"
+                        style={{
+                            padding: '8px',
+                            border: 'none',
+                            background: 'transparent',
+                            color: '#94a3b8',
+                            cursor: 'pointer',
+                            position: 'relative'
+                        }}
                     >
-                        <Bell size={20} />
-                        {notifications.some(n => !n.isRead) && (
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full animate-pulse" />
+                        🔔
+                        {notifications && notifications.length > 0 && (
+                            <span style={{
+                                position: 'absolute',
+                                top: '5px',
+                                right: '5px',
+                                width: '8px',
+                                height: '8px',
+                                background: '#22d3ee',
+                                borderRadius: '50%'
+                            }} />
                         )}
                     </button>
 
-                    <AnimatePresence>
-                        {showNotifications && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 10 }}
-                                className="absolute right-0 mt-4 w-80 bg-surfaceHighlight border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50"
-                            >
-                                <div className="p-4 border-b border-white/5 flex justify-between items-center">
-                                    <h4 className="font-bold">Notifications</h4>
-                                    <button className="text-xs text-primary hover:underline">Mark all read</button>
-                                </div>
-                                <div className="max-h-64 overflow-y-auto">
-                                    {notifications.length === 0 ? (
-                                        <div className="p-8 text-center text-noble-gray italic text-sm">No new alerts.</div>
-                                    ) : (
-                                        notifications.map(n => (
-                                            <div key={n.id} className={`p-4 border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer ${!n.isRead ? 'bg-primary/5' : ''}`}>
-                                                <p className="text-xs font-bold text-white mb-1">{n.title}</p>
-                                                <p className="text-[11px] text-noble-gray line-clamp-2">{n.message}</p>
-                                                <p className="text-[9px] text-noble-gray/50 mt-1 uppercase font-mono">{new Date(n.createdAt).toLocaleDateString()}</p>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                    {showNotifications && (
+                        <div style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: '40px',
+                            width: '300px',
+                            background: '#1e293b',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '15px',
+                            boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+                            overflow: 'hidden',
+                            zIndex: 50
+                        }}>
+                            <div style={{ padding: '15px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                <h4 style={{ fontWeight: 'bold' }}>Notifications</h4>
+                            </div>
+                            <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                                {(!notifications || notifications.length === 0) ? (
+                                    <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
+                                        No notifications
+                                    </div>
+                                ) : (
+                                    notifications.map(n => (
+                                        <div key={n.id} style={{ padding: '15px', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }}>
+                                            <p style={{ fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '5px' }}>{n.title}</p>
+                                            <p style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{n.message}</p>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div
                     onClick={() => navigate('/settings')}
-                    className="flex items-center gap-3 pl-6 border-l border-white/10 cursor-pointer group"
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        paddingLeft: '20px',
+                        borderLeft: '1px solid rgba(255,255,255,0.1)',
+                        cursor: 'pointer'
+                    }}
                 >
-                    <div className="text-right hidden sm:block">
-                        <p className="text-sm font-bold text-white group-hover:text-primary transition-colors">{user?.firstName} {user?.lastName}</p>
-                        <p className="text-[10px] text-noble-gray uppercase tracking-widest">{user?.role || 'Member'}</p>
+                    <div style={{ textAlign: 'right', display: 'none' }} className="user-info">
+                        <p style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{user?.firstName} {user?.lastName}</p>
+                        <p style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase' }}>{user?.role}</p>
                     </div>
-                    <motion.div
-                        whileHover={{ scale: 1.1 }}
-                        className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-emerald-600 border-2 border-white/10 flex items-center justify-center text-background font-bold"
-                    >
+                    <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        background: '#22d3ee',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#0f172a',
+                        fontWeight: 'bold'
+                    }}>
                         {initials}
-                    </motion.div>
+                    </div>
                 </div>
             </div>
+
+            <style>{`
+                @media (max-width: 1024px) {
+                    .mobile-menu-btn { display: block !important; }
+                    .user-info { display: block !important; }
+                }
+            `}</style>
         </header>
     );
 };

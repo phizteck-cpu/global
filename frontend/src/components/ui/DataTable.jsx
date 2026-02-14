@@ -7,8 +7,6 @@ import {
   ChevronRight,
   Search,
   Filter,
-  Download,
-  MoreVertical,
   CheckSquare,
   Square,
   ArrowUpDown,
@@ -180,7 +178,7 @@ const DataTable = ({
                       type={col.filterType || 'text'}
                       placeholder={`Filter ${col.label}...`}
                       className="w-full px-3 py-2 rounded-lg bg-surface border border-white/10 text-white text-sm placeholder-white/30 focus:ring-2 focus:ring-primary/20 outline-none"
-                      onChange={(e) => {
+                      onChange={() => {
                         // Handle filter change
                       }}
                     />

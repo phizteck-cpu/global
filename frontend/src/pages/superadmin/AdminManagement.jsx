@@ -140,7 +140,7 @@ const AdminManagement = () => {
                         </div>
                         <div>
                             <h3 className="text-2xl font-black font-heading text-white tracking-tight">Company Bank Settings</h3>
-                            <p className="text-sm text-noble-gray">Configure the company's bank account for receiving payments</p>
+                            <p className="text-sm text-noble-gray">Configure the company&apos;s bank account for receiving payments</p>
                         </div>
                     </div>
 

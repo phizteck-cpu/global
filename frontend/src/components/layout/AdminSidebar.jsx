@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
     ShoppingBag,
-    CreditCard,
     Users,
-    Settings,
     LogOut,
     LayoutTemplate,
     CheckCircle,

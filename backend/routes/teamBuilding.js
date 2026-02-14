@@ -10,15 +10,15 @@ const router = express.Router();
  */
 router.get('/stats', authenticateToken, anyAdmin, async (req, res) => {
     try {
-        const totalMembers = await prisma.user.count();
+        const totalMembers = await prisma.user.count({ where: { role: 'MEMBER' } });
         const qualifiedMembers = await prisma.user.count({
-            where: { qualificationStatus: 'QUALIFIED' }
+            where: { qualificationStatus: 'QUALIFIED', role: 'MEMBER' }
         });
         const pendingMembers = await prisma.user.count({
-            where: { qualificationStatus: 'PENDING' }
+            where: { qualificationStatus: 'PENDING', role: 'MEMBER' }
         });
         const disqualifiedMembers = await prisma.user.count({
-            where: { qualificationStatus: 'DISQUALIFIED' }
+            where: { qualificationStatus: 'DISQUALIFIED', role: 'MEMBER' }
         });
 
         res.json({
@@ -43,7 +43,7 @@ router.get('/members', authenticateToken, anyAdmin, async (req, res) => {
         const { status, page = 1, limit = 50 } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        const where = status ? { qualificationStatus: status } : {};
+        const where = status ? { qualificationStatus: status, role: 'MEMBER' } : { role: 'MEMBER' };
 
         const members = await prisma.user.findMany({
             where,
@@ -56,15 +56,32 @@ router.get('/members', authenticateToken, anyAdmin, async (req, res) => {
                 qualificationStatus: true,
                 createdAt: true,
                 referralCode: true,
-                referredByCode: true
+                referredBy: true
             },
             orderBy: { createdAt: 'desc' }
         });
 
         const total = await prisma.user.count({ where });
 
+        const membersWithReferrer = await Promise.all(
+            members.map(async (member) => {
+                let referrerInfo = null;
+                if (member.referredBy) {
+                    const referrer = await prisma.user.findUnique({
+                        where: { id: member.referredBy },
+                        select: { username: true, referralCode: true }
+                    });
+                    referrerInfo = referrer;
+                }
+                return {
+                    ...member,
+                    referrerInfo
+                };
+            })
+        );
+
         res.json({
-            members,
+            members: membersWithReferrer,
             pagination: {
                 total,
                 page: parseInt(page),
@@ -86,41 +103,40 @@ router.get('/chain/:userId', authenticateToken, anyAdmin, async (req, res) => {
     try {
         const { userId } = req.params;
 
-        // Get the user and their upline chain
         const user = await prisma.user.findUnique({
-            where: { id: parseInt(userId) },
-            include: {
-                referredBy: {
-                    select: { id: true, username: true, email: true, qualificationStatus: true }
-                }
-            }
+            where: { id: parseInt(userId) }
         });
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Build upline chain
         const uplineChain = [];
-        let current = user.referredBy;
-        while (current) {
-            uplineChain.push(current);
-            const next = await prisma.user.findUnique({
-                where: { id: current.id },
-                select: { id: true, referredBy: { select: { id: true, username: true, email: true, qualificationStatus: true } } }
+        let currentReferrerId = user.referredBy;
+        
+        while (currentReferrerId) {
+            const referrer = await prisma.user.findUnique({
+                where: { id: currentReferrerId },
+                select: { id: true, username: true, email: true, qualificationStatus: true, referralCode: true }
             });
-            current = next?.referredBy;
+            
+            if (referrer) {
+                uplineChain.push(referrer);
+                currentReferrerId = referrer.referredBy;
+            } else {
+                break;
+            }
         }
 
-        // Get direct referrals (downline)
         const directReferrals = await prisma.user.findMany({
-            where: { referredByCode: user.referralCode },
+            where: { referredBy: user.id },
             select: {
                 id: true,
                 username: true,
                 email: true,
                 qualificationStatus: true,
-                createdAt: true
+                createdAt: true,
+                referralCode: true
             }
         });
 
@@ -132,7 +148,7 @@ router.get('/chain/:userId', authenticateToken, anyAdmin, async (req, res) => {
                 qualificationStatus: user.qualificationStatus,
                 referralCode: user.referralCode
             },
-            uplineChain: uplineChain.reverse(), // Reverse to show from top to immediate parent
+            uplineChain: uplineChain.reverse(),
             directReferrals
         });
     } catch (error) {
@@ -177,27 +193,17 @@ router.put('/qualify/:userId', authenticateToken, anyAdmin, async (req, res) => 
  */
 router.get('/qualification-breakdown', authenticateToken, anyAdmin, async (req, res) => {
     try {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
         const breakdown = await prisma.user.groupBy({
             by: ['qualificationStatus'],
+            where: { role: 'MEMBER' },
             _count: { id: true }
-        });
-
-        const recentQualifications = await prisma.user.count({
-            where: {
-                qualificationStatus: 'QUALIFIED',
-                updatedAt: { gte: thirtyDaysAgo }
-            }
         });
 
         res.json({
             breakdown: breakdown.map(item => ({
                 status: item.qualificationStatus,
                 count: item._count.id
-            })),
-            recentQualifications
+            }))
         });
     } catch (error) {
         console.error('Error fetching qualification breakdown:', error);

@@ -1,242 +1,231 @@
-﻿import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, Shield, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
-  const [showPassword, setShowPassword] = React.useState(false);
-  const [serverError, setServerError] = React.useState('');
-  const [isLoading, setIsLoading] = React.useState(false);
-  const navigate = useNavigate();
-  const { login } = useAuth();
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [serverError, setServerError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const navigate = useNavigate();
+    const { login } = useAuth();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm({
-    defaultValues: {
-      username: '',
-      password: '',
-    },
-    mode: 'onBlur',
-  });
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setServerError('');
+        setIsLoading(true);
 
-  const onSubmit = async (data) => {
-    setServerError('');
-    setIsLoading(true);
+        try {
+            const result = await login(username, password);
 
-    try {
-      const result = await login(data.username, data.password);
-
-      if (result.success) {
-        const adminRoles = ['ADMIN', 'SUPERADMIN', 'FINANCE_ADMIN', 'OPS_ADMIN', 'SUPPORT_ADMIN'];
-        if (adminRoles.includes(result.role)) {
-          navigate('/admin');
-        } else {
-          navigate('/dashboard');
+            if (result.success) {
+                const adminRoles = ['ADMIN', 'SUPERADMIN', 'FINANCE_ADMIN', 'OPS_ADMIN', 'SUPPORT_ADMIN'];
+                if (adminRoles.includes(result.role)) {
+                    navigate('/admin');
+                } else {
+                    navigate('/dashboard');
+                }
+            } else {
+                setServerError(result.message || 'Login failed. Please try again.');
+            }
+        } catch (error) {
+            setServerError('An unexpected error occurred. Please try again.');
+        } finally {
+            setIsLoading(false);
         }
-      } else {
-        setServerError(result.message || 'Login failed. Please try again.');
-      }
-    } catch (error) {
-      setServerError('An unexpected error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
-      {/* Background Decor */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[120px]" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-[120px]" />
+    return (
+        <div style={{ 
+            minHeight: '100vh', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            background: '#0f172a',
+            padding: '20px'
+        }}>
+            <div style={{ 
+                maxWidth: '450px', 
+                width: '100%', 
+                background: 'rgba(30,41,59,0.8)', 
+                padding: '40px', 
+                borderRadius: '30px', 
+                border: '1px solid rgba(255,255,255,0.1)',
+                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)'
+            }}>
+                <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+                    <div style={{ 
+                        width: '70px', 
+                        height: '70px', 
+                        background: 'rgba(34,211,238,0.1)', 
+                        borderRadius: '20px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        margin: '0 auto 15px'
+                    }}>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                    </div>
+                    <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '10px' }}>
+                        <span style={{ color: 'white' }}>Value</span>
+                        <span style={{ color: '#22d3ee' }}>Hills</span>
+                    </h1>
+                    <p style={{ color: '#94a3b8' }}>Welcome back to your cooperative hub.</p>
+                </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full glass-panel p-8 rounded-3xl border border-white/10 shadow-2xl relative z-10"
-      >
-        <div className="text-center mb-10">
-          <motion.div
-            initial={{ scale: 0.9 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-4"
-          >
-            <Shield className="w-8 h-8 text-primary" />
-          </motion.div>
-          <h1 className="text-4xl font-bold font-heading mb-2">
-            <span className="text-white">Value</span>
-            <span className="text-primary">Hills</span>
-          </h1>
-          <p className="text-noble-gray">Welcome back to your cooperative hub.</p>
+                {serverError && (
+                    <div style={{ 
+                        padding: '15px', 
+                        background: 'rgba(239,68,68,0.1)', 
+                        border: '1px solid rgba(239,68,68,0.3)', 
+                        borderRadius: '10px', 
+                        color: '#f87171', 
+                        marginBottom: '20px',
+                        fontSize: '0.9rem'
+                    }}>
+                        {serverError}
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} style={{ marginBottom: '25px' }}>
+                    <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', color: '#94a3b8', fontSize: '0.9rem', marginLeft: '5px' }}>
+                            Username
+                        </label>
+                        <input
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            required
+                            minLength={3}
+                            style={{
+                                width: '100%',
+                                padding: '15px 20px',
+                                borderRadius: '15px',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                background: 'rgba(255,255,255,0.05)',
+                                color: 'white',
+                                fontSize: '1rem',
+                                outline: 'none'
+                            }}
+                            placeholder="Enter your username"
+                        />
+                    </div>
+
+                    <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', color: '#94a3b8', fontSize: '0.9rem', marginLeft: '5px' }}>
+                            Password
+                        </label>
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                style={{
+                                    width: '100%',
+                                    padding: '15px 20px',
+                                    paddingRight: '50px',
+                                    borderRadius: '15px',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    background: 'rgba(255,255,255,0.05)',
+                                    color: 'white',
+                                    fontSize: '1rem',
+                                    outline: 'none'
+                                }}
+                                placeholder="••••••••"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                style={{
+                                    position: 'absolute',
+                                    right: '15px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#94a3b8',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {showPassword ? '👁' : '👁‍🗨'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style={{ textAlign: 'right', marginBottom: '25px' }}>
+                        <Link to="/forgot-password" style={{ color: '#94a3b8', fontSize: '0.85rem', textDecoration: 'none' }}>
+                            Forgot password?
+                        </Link>
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        style={{
+                            width: '100%',
+                            padding: '16px',
+                            borderRadius: '15px',
+                            border: 'none',
+                            background: '#22d3ee',
+                            color: '#0f172a',
+                            fontWeight: 'bold',
+                            fontSize: '0.9rem',
+                            cursor: isLoading ? 'not-allowed' : 'pointer',
+                            opacity: isLoading ? 0.7 : 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '10px'
+                        }}
+                    >
+                        {isLoading ? (
+                            <>
+                                <span style={{ 
+                                    width: '20px', 
+                                    height: '20px', 
+                                    border: '2px solid #0f172a', 
+                                    borderTopColor: 'transparent', 
+                                    borderRadius: '50%', 
+                                    animation: 'spin 1s linear infinite' 
+                                }} />
+                                Authenticating...
+                            </>
+                        ) : (
+                            'Access Dashboard'
+                        )}
+                    </button>
+                </form>
+
+                <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>
+                    Not a member yet?{' '}
+                    <Link to="/signup" style={{ color: '#22d3ee', fontWeight: 'bold', textDecoration: 'none' }}>
+                        Join the Network
+                    </Link>
+                </p>
+
+                <p style={{ textAlign: 'center', color: '#64748b', fontSize: '0.8rem', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                    Are you staff?{' '}
+                    <Link to="/admin/login" style={{ color: '#f97316', fontWeight: 'bold', textDecoration: 'none' }}>
+                        Institutional Access
+                    </Link>
+                </p>
+            </div>
+
+            <style>{`
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                input::placeholder { color: rgba(255,255,255,0.3); }
+                input:focus { border-color: rgba(34,211,238,0.5) !important; }
+            `}</style>
         </div>
-
-        <AnimatePresence>
-          {serverError && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mb-6 p-4 bg-red-500/10 text-red-300 text-sm rounded-xl border border-red-500/30 flex items-start gap-3"
-            >
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-              <span>{serverError}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Username Field */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-noble-gray ml-1">
-              Username
-            </label>
-            <div className="relative group">
-              <input
-                type="text"
-                {...register('username', {
-                  required: 'Username is required',
-                  minLength: { value: 3, message: 'Username must be at least 3 characters' },
-                })}
-                className={`w-full px-5 py-4 rounded-xl bg-surface border ${
-                  errors.username ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-primary/50'
-                } text-white placeholder-white/30 focus:ring-4 focus:ring-primary/10 outline-none transition-all`}
-                placeholder="Enter your username"
-                disabled={isLoading}
-              />
-              {errors.username && (
-                <motion.p
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-red-400 text-xs mt-1 ml-1 flex items-center gap-1"
-                >
-                  <AlertCircle className="w-3 h-3" />
-                  {errors.username.message}
-                </motion.p>
-              )}
-            </div>
-          </div>
-
-          {/* Password Field */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-noble-gray ml-1">
-              Password
-            </label>
-            <div className="relative group">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                {...register('password', {
-                  required: 'Password is required',
-                  minLength: { value: 1, message: 'Password is required' },
-                })}
-                className={`w-full px-5 py-4 rounded-xl bg-surface border ${
-                  errors.password ? 'border-red-500/50 focus:border-red-500' : 'border-white/10 focus:border-primary/50'
-                } text-white placeholder-white/30 focus:ring-4 focus:ring-primary/10 outline-none transition-all pr-12`}
-                placeholder="••••••••"
-                disabled={isLoading}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-              {errors.password && (
-                <motion.p
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-red-400 text-xs mt-1 ml-1 flex items-center gap-1"
-                >
-                  <AlertCircle className="w-3 h-3" />
-                  {errors.password.message}
-                </motion.p>
-              )}
-            </div>
-          </div>
-
-          {/* Forgot Password Link */}
-          <div className="flex justify-end">
-            <Link
-              to="/forgot-password"
-              className="text-xs text-noble-gray hover:text-primary transition-colors flex items-center gap-1"
-            >
-              <Lock className="w-3 h-3" />
-              Forgot password?
-            </Link>
-          </div>
-
-          {/* Submit Button */}
-          <motion.button
-            type="submit"
-            disabled={isSubmitting || isLoading}
-            whileHover={{ scale: isSubmitting || isLoading ? 1 : 1.02 }}
-            whileTap={{ scale: isSubmitting || isLoading ? 1 : 0.98 }}
-            className="w-full py-4 bg-primary text-background rounded-xl font-bold uppercase tracking-widest text-xs hover:shadow-glow transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {isSubmitting || isLoading ? (
-              <>
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                  className="w-5 h-5 border-2 border-background border-t-transparent rounded-full"
-                />
-                Authenticating...
-              </>
-            ) : (
-              <>
-                <Shield className="w-5 h-5" />
-                Access Dashboard
-              </>
-            )}
-          </motion.button>
-        </form>
-
-        <p className="mt-8 text-center text-noble-gray space-y-2 flex flex-col">
-          <span>
-            Not a member yet?{' '}
-            <Link to="/signup" className="text-primary font-semibold hover:text-white transition-colors">
-              Join the Network
-            </Link>
-          </span>
-          <span className="text-xs pt-2 border-t border-white/10 italic">
-            Are you staff?{' '}
-            <Link to="/admin/login" className="text-secondary font-bold hover:underline">
-              Institutional Access
-            </Link>
-          </span>
-        </p>
-
-        {/* Password Requirements Hint */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-6 p-4 bg-white/5 rounded-xl border border-white/10"
-        >
-          <p className="text-xs text-noble-gray mb-2">Security Tip:</p>
-          <ul className="text-xs text-white/60 space-y-1">
-            <li className="flex items-center gap-2">
-              <CheckCircle className="w-3 h-3 text-primary" />
-              Use your registered username to log in
-            </li>
-            <li className="flex items-center gap-2">
-              <CheckCircle className="w-3 h-3 text-primary" />
-              Password must be at least 8 characters
-            </li>
-            <li className="flex items-center gap-2">
-              <CheckCircle className="w-3 h-3 text-primary" />
-              Contact support if account is locked
-            </li>
-          </ul>
-        </motion.div>
-      </motion.div>
-    </div>
-  );
+    );
 };
 
 export default Login;

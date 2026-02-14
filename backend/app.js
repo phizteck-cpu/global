@@ -18,6 +18,7 @@ import bonusRoutes from './routes/bonuses.js';
 import notificationRoutes from './routes/notifications.js';
 import withdrawalRoutes from './routes/withdrawals.js';
 import inventoryRoutes from './routes/inventory.js';
+import teamBuildingRoutes from './routes/teamBuilding.js';
 import cron from 'node-cron';
 import { runDailyContributions } from './services/contributionAutomation.js';
 import { enforceContributionPolicy } from './services/contributionEnforcement.js';
@@ -188,6 +189,7 @@ apiRouter.use('/notifications', notificationRoutes);
 apiRouter.use('/withdrawals', withdrawalRoutes);
 apiRouter.use('/redemptions', redemptionRoutes);
 apiRouter.use('/inventory', inventoryRoutes);
+apiRouter.use('/team-building', teamBuildingRoutes);
 apiRouter.use('/admin', adminRoutes);
 apiRouter.use('/dashboard', dashboardRoutes);
 

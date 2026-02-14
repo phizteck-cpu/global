@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, Shield, User, Mail, Lock, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Shield, User, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 import api from '../api';
 
 const Signup = () => {

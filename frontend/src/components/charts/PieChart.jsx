@@ -8,7 +8,6 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import { clsx } from 'clsx';
 
 const CustomTooltip = ({ active, payload }) => {
   if (!active || !payload || !payload.length) return null;
