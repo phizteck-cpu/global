@@ -1,0 +1,274 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// 2. USER ROLES & PERMISSIONS
+// -----------------------------------------------------------------------------
+model User {
+  id             Int     @id @default(autoincrement())
+  email          String  @unique
+  username       String  @unique
+  password       String
+  firstName      String
+  lastName       String
+  phone          String? @unique
+  role           String  @default("MEMBER") // MEMBER, ADMIN, SUPERADMIN, ACCOUNTANT
+  status         String  @default("ACTIVE") // ACTIVE, SUSPENDED, PENDING_KYC
+  transactionPin String? // 4-6 digit encrypted PIN for sensitive operations
+
+  // KYC & Identification
+  kycDocUrl String?
+  kycStatus String  @default("PENDING") // PENDING, VERIFIED, REJECTED
+
+  // 5. WALLET & LEDGER SYSTEM
+  // Separation of balances to represent different ledgers
+  walletBalance       Float @default(0.0) // Member Virtual Wallet (Display/Withdrawal)
+  contributionBalance Float @default(0.0) // Cooperative Contribution Ledger (Locked)
+  bvBalance           Float @default(0.0) // 3.4 BV Accumulation
+
+  // 3.2 Membership & Tier Engine
+  tierId Int?
+  tier   Tier? @relation(fields: [tierId], references: [id])
+
+  // 3.5 Eligibility & Lock Logic
+  joinDate  DateTime  @default(now())
+  lockUntil DateTime? // Set to 7 months after registration/completion
+
+  // Referral Tracking
+  referralCode String @unique @default(uuid())
+  referredBy   Int?
+
+  // Security & Verification Fields
+  emailVerified        Boolean   @default(false)
+  verificationToken    String?
+  refreshToken         String?
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+
+  // 2FA Support
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?
+
+  // Bank Details (for withdrawals)
+  bankName      String?
+  accountNumber String?
+  accountName   String?
+
+  // Relations
+  contributions     Contribution[]
+  transactions      Transaction[]
+  auditLogs         AuditLog[]     @relation("AdminAction")
+  targetLogs        AuditLog[]     @relation("TargetUser")
+  withdrawals       Withdrawal[]
+  bonuses           Bonus[]
+  sourcedBonuses    Bonus[]        @relation("BonusSource")
+  referralsMade     Referral[]     @relation("Referrer")
+  referralsReceived Referral[]     @relation("Referred")
+  redemptions       Redemption[]
+  notifications     Notification[]
+  paymentProofs     PaymentProof[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// 3.2 Membership & Tier Engine
+// -----------------------------------------------------------------------------
+model Tier {
+  id             Int    @id @default(autoincrement())
+  name           String @unique // STARTER, PRO, ELITE
+  weeklyAmount   Float  @default(1333.33)
+  onboardingFee  Float  @default(3000)
+  maintenanceFee Float  @default(100)
+  upgradeFee     Float  @default(0)
+  durationWeeks  Int    @default(45) // Maturity period in weeks
+
+  // 3.2 Rules: Tier controls eligibility ceilings only
+  maxWithdrawal Float?
+  bvThreshold   Float?
+
+  users     User[]
+  createdAt DateTime @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// 3.3 Contribution Engine
+// -----------------------------------------------------------------------------
+model Contribution {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  weekNumber  Int // 1 to 45
+  amount      Float // Should be 1333.33 for 60k total
+  status      String   @default("PAID") // PAID, MISSED, LATE
+  description String?
+  weekStartDate DateTime? // Start of the contribution week (Monday)
+  weekEndDate   DateTime? // End of contribution window (Saturday)
+  paidAt        DateTime? // When payment was made
+  lateFee       Float    @default(0) // Late payment fine
+  createdAt   DateTime @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// 5. LEDGER SYSTEM
+// -----------------------------------------------------------------------------
+model Transaction {
+  id     Int   @id @default(autoincrement())
+  userId Int
+  user   User  @relation(fields: [userId], references: [id])
+  amount Float
+
+  // 4. Ledger classification
+  ledgerType String // COOPERATIVE, COMPANY, VIRTUAL
+  type       String // CONTRIBUTION, ONBOARDING_FEE, MAINTENANCE_FEE, UPGRADE_FEE, WITHDRAWAL_FEE, EARNINGS
+  direction  String // IN, OUT
+
+  status      String  @default("SUCCESS") // PENDING, SUCCESS, FAILED
+  reference   String? @unique
+  description String?
+
+  createdAt DateTime @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// 3.6 Withdrawal Request Module
+// -----------------------------------------------------------------------------
+model Withdrawal {
+  id     Int    @id @default(autoincrement())
+  userId Int
+  user   User   @relation(fields: [userId], references: [id])
+  amount Float
+  status String @default("PENDING") // PENDING, ADMIN_REVIEW, QUEUED, APPROVED, COMPLETED, REJECTED
+  fee    Float  @default(0.0)
+
+  adminId     Int?
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// PAYMENT PROOF & APPROVAL SYSTEM
+// -----------------------------------------------------------------------------
+model PaymentProof {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  user            User      @relation(fields: [userId], references: [id])
+  amount          Float
+  proofImageUrl   String // URL/path to uploaded proof image
+  bankName        String?
+  accountName     String?
+  transactionRef  String?
+  status          String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  adminId         Int?
+  adminNote       String?
+  processedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// 7. REPORTING & AUDIT
+// -----------------------------------------------------------------------------
+model AuditLog {
+  id           Int      @id @default(autoincrement())
+  adminId      Int
+  action       String // e.g. "USER_SUSPENSION", "TIER_UPGRADE", "FREEZE"
+  targetUserId Int?
+  details      String // Reason and context
+  ipAddress    String?
+  timestamp    DateTime @default(now())
+
+  admin      User  @relation("AdminAction", fields: [adminId], references: [id])
+  targetUser User? @relation("TargetUser", fields: [targetUserId], references: [id])
+}
+
+model SystemConfig {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// BONUS & REFERRAL SYSTEM
+// -----------------------------------------------------------------------------
+model Bonus {
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  user         User      @relation(fields: [userId], references: [id])
+  amount       Float
+  type         String // REFERRAL, BV_BONUS, MATCHING
+  sourceUserId Int?
+  sourceUser   User?     @relation("BonusSource", fields: [sourceUserId], references: [id])
+  status       String    @default("PENDING") // PENDING, PROCESSED, CANCELLED
+  createdAt    DateTime  @default(now())
+  processedAt  DateTime?
+}
+
+// Referral tracking for network/level bonuses
+model Referral {
+  id         Int      @id @default(autoincrement())
+  referrerId Int
+  referrer   User     @relation("Referrer", fields: [referrerId], references: [id])
+  referredId Int
+  referred   User     @relation("Referred", fields: [referredId], references: [id])
+  level      Int      @default(1) // 1, 2, 3 for direct, indirect referral levels
+  status     String   @default("PENDING") // PENDING, ACTIVE, COMPLETED
+  bonusPaid  Float    @default(0.0)
+  createdAt  DateTime @default(now())
+
+  @@unique([referrerId, referredId])
+}
+
+// -----------------------------------------------------------------------------
+// PACKAGE & REDEMPTION SYSTEM
+// -----------------------------------------------------------------------------
+model Package {
+  id            Int          @id @default(autoincrement())
+  name          String
+  description   String?
+  price         Float
+  bvValue       Float        @default(0)
+  durationWeeks Int          @default(0)
+  maxQuantity   Int?
+  isActive      Boolean      @default(true)
+  imageUrl      String?
+  redemptions   Redemption[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Redemption {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id])
+  packageId   Int
+  package     Package   @relation(fields: [packageId], references: [id])
+  amount      Float
+  pointsUsed  Float     @default(0)
+  status      String    @default("PENDING") // PENDING, APPROVED, REJECTED, COMPLETED
+  adminNote   String?
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// NOTIFICATION SYSTEM
+// -----------------------------------------------------------------------------
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  type      String // BONUS, CONTRIBUTION, WITHDRAWAL, SYSTEM
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

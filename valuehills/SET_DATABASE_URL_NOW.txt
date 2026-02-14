@@ -1,0 +1,105 @@
+╔═══════════════════════════════════════════════════════════╗
+║     🎯 YOUR APP USES PRISMA - USE DATABASE_URL            ║
+╚═══════════════════════════════════════════════════════════╝
+
+IMPORTANT: Hostinger's advice about separate DB variables
+is for mysql2 apps. Your app uses PRISMA ORM, which is
+different!
+
+═══════════════════════════════════════════════════════════
+  WHAT TO SET IN HOSTINGER (PRISMA REQUIRES THIS)
+═══════════════════════════════════════════════════════════
+
+Set this ONE environment variable:
+
+Variable Name: DATABASE_URL
+
+Variable Value:
+mysql://u948761456_value1:Ge2hilv4A27luE@localhost:3306/u948761456_hills
+
+═══════════════════════════════════════════════════════════
+  DO NOT SET THESE (Prisma won't read them)
+═══════════════════════════════════════════════════════════
+
+❌ DB_HOST=localhost
+❌ DB_PORT=3306
+❌ DB_USER=u948761456_value1
+❌ DB_PASSWORD=Ge2hilv4A27luE
+❌ DB_NAME=u948761456_hills
+
+These separate variables are for mysql2 apps, not Prisma!
+
+═══════════════════════════════════════════════════════════
+  WHY DATABASE_URL IS REQUIRED
+═══════════════════════════════════════════════════════════
+
+Your Prisma schema (backend/prisma/schema.prisma):
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")  ← Looks for this!
+}
+
+Prisma ONLY reads DATABASE_URL. It doesn't read separate
+DB_HOST, DB_PORT, etc. variables.
+
+═══════════════════════════════════════════════════════════
+  STEP-BY-STEP: SET DATABASE_URL IN HOSTINGER
+═══════════════════════════════════════════════════════════
+
+1. Login: https://hpanel.hostinger.com
+
+2. Go to: Website → Your Node.js Application
+
+3. Click: "Environment Variables" tab
+
+4. Look for: DATABASE_URL
+
+5. If it exists:
+   - Click "Edit" (pencil icon)
+   - Change value to:
+     mysql://u948761456_value1:Ge2hilv4A27luE@localhost:3306/u948761456_hills
+   - Click "Save"
+
+6. If it doesn't exist:
+   - Click "Add Variable"
+   - Name: DATABASE_URL
+   - Value: mysql://u948761456_value1:Ge2hilv4A27luE@localhost:3306/u948761456_hills
+   - Click "Add"
+
+7. Click: "Restart" button (top right)
+
+8. Wait: 10-20 seconds
+
+9. Test: https://api2.valuehills.shop/api/health
+
+═══════════════════════════════════════════════════════════
+  AFTER SETTING DATABASE_URL
+═══════════════════════════════════════════════════════════
+
+Initialize database via File Manager Terminal:
+
+npx prisma generate --schema=backend/prisma/schema.prisma
+npx prisma db push --schema=backend/prisma/schema.prisma
+node backend/prisma/seed.js
+
+Then restart app again.
+
+═══════════════════════════════════════════════════════════
+  VERIFICATION
+═══════════════════════════════════════════════════════════
+
+Your app code uses:
+✅ import prisma from './prisma/client.js'
+✅ Prisma ORM for database operations
+✅ No mysql2 connection code
+
+Therefore:
+✅ Must use DATABASE_URL
+❌ Cannot use separate DB_* variables
+
+═══════════════════════════════════════════════════════════
+
+🎯 SET DATABASE_URL IN HOSTINGER NOW!
+
+📖 See PRISMA_VS_MYSQL2.md for detailed explanation

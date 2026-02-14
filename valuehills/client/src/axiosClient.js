@@ -1,0 +1,38 @@
+import axios from 'axios';
+
+const apiBaseURL = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.hostname.includes('valuehills.shop') ? 'https://api2.valuehills.shop/api' : '/api');
+
+const axiosClient = axios.create({
+    baseURL: apiBaseURL,
+});
+
+// Add a request interceptor to attach the token
+axiosClient.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+// Add a response interceptor to handle 401 errors
+axiosClient.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            // Token expired or invalid
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminUser');
+            // Redirect to login
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
+
+export default axiosClient;

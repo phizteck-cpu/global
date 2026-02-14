@@ -1,0 +1,13 @@
+RUN THESE COMMANDS TO DEPLOY:
+
+git add .
+git commit -m "Fix: Add server.js entry point for Hostinger deployment"
+git push origin main
+
+THEN SSH INTO HOSTINGER AND RUN:
+
+npm run init-db
+
+THEN TEST:
+
+https://api2.valuehills.shop/api/health

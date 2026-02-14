@@ -1,0 +1,78 @@
+╔═══════════════════════════════════════════════════════════╗
+║          🎯 SQLITE SOLUTION - DEPLOY NOW!                 ║
+╚═══════════════════════════════════════════════════════════╝
+
+✅ CHANGES MADE:
+   - Switched from MySQL to SQLite
+   - Updated Prisma schema
+   - Updated .env.production
+
+═══════════════════════════════════════════════════════════
+  STEP 1: PUSH TO GITHUB
+═══════════════════════════════════════════════════════════
+
+git add backend/prisma/schema.prisma backend/.env.production SWITCH_TO_SQLITE.md
+git commit -m "Switch to SQLite database for easier deployment"
+git push origin main
+
+═══════════════════════════════════════════════════════════
+  STEP 2: UPDATE ENVIRONMENT VARIABLE IN HOSTINGER
+═══════════════════════════════════════════════════════════
+
+1. Go to your Node.js app in Hostinger
+2. Click "Environment Variables"
+3. Update DATABASE_URL to:
+
+   file:./backend/prisma/prod.db
+
+4. Click "Save"
+
+═══════════════════════════════════════════════════════════
+  STEP 3: INITIALIZE DATABASE (Choose ONE method)
+═══════════════════════════════════════════════════════════
+
+METHOD A: Via SSH (Recommended)
+───────────────────────────────────────────────────────────
+ssh u948761456@your-server -p PORT
+cd domains/api2.valuehills.shop/public_html
+npx prisma db push --schema=backend/prisma/schema.prisma
+node backend/prisma/seed.js
+
+METHOD B: Via Hostinger File Manager
+───────────────────────────────────────────────────────────
+1. Go to Files → File Manager
+2. Navigate to your app folder
+3. Click "Terminal" button at top
+4. Run:
+   npx prisma db push --schema=backend/prisma/schema.prisma
+   node backend/prisma/seed.js
+
+═══════════════════════════════════════════════════════════
+  STEP 4: RESTART APP
+═══════════════════════════════════════════════════════════
+
+In Hostinger control panel, click "Restart" button
+
+═══════════════════════════════════════════════════════════
+  STEP 5: TEST
+═══════════════════════════════════════════════════════════
+
+Visit: https://api2.valuehills.shop/api/health
+
+Expected: {"status":"ok","database":"connected"}
+
+═══════════════════════════════════════════════════════════
+
+🎉 WHY SQLITE IS BETTER FOR NOW:
+
+✅ No username/password needed
+✅ No database creation required
+✅ Auto-creates the database file
+✅ Works immediately
+✅ Perfect for your app size
+
+You can switch to MySQL later if needed!
+
+═══════════════════════════════════════════════════════════
+
+📖 DETAILED GUIDE: See SWITCH_TO_SQLITE.md

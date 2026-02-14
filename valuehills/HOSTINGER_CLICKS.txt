@@ -1,0 +1,110 @@
+╔═══════════════════════════════════════════════════════════╗
+║        EXACT CLICKS IN HOSTINGER - FOLLOW THIS            ║
+╚═══════════════════════════════════════════════════════════╝
+
+STEP 1: LOGIN
+───────────────────────────────────────────────────────────
+Go to: https://hpanel.hostinger.com
+Enter your username and password
+Click "Login"
+
+STEP 2: FIND YOUR APP
+───────────────────────────────────────────────────────────
+On the left sidebar, click: "Website"
+You'll see a list of your websites
+Find: api2.valuehills.shop
+Click on it
+
+STEP 3: GO TO ENVIRONMENT VARIABLES
+───────────────────────────────────────────────────────────
+You'll see tabs at the top:
+- Overview
+- Environment Variables  ← CLICK THIS
+- Logs
+- etc.
+
+Click "Environment Variables"
+
+STEP 4: ADD VARIABLES (CHOOSE METHOD A OR B)
+───────────────────────────────────────────────────────────
+
+METHOD A: One Variable
+───────────────────────────────────────────────────────────
+Click "Add Variable" button
+
+In the popup:
+  Name: DATABASE_URL
+  Value: mysql://u948761456_value1:Ge2hilv4A27luE@localhost:3306/u948761456_hills
+
+Click "Add" or "Save"
+
+METHOD B: Five Variables (EASIER!)
+───────────────────────────────────────────────────────────
+Click "Add Variable" button 5 times, once for each:
+
+Variable 1:
+  Name: DB_HOST
+  Value: localhost
+
+Variable 2:
+  Name: DB_PORT
+  Value: 3306
+
+Variable 3:
+  Name: DB_USER
+  Value: u948761456_value1
+
+Variable 4:
+  Name: DB_PASSWORD
+  Value: Ge2hilv4A27luE
+
+Variable 5:
+  Name: DB_NAME
+  Value: u948761456_hills
+
+STEP 5: RESTART APP
+───────────────────────────────────────────────────────────
+Look for "Restart" button (usually top right)
+Click "Restart"
+Wait 20 seconds
+
+STEP 6: INITIALIZE DATABASE
+───────────────────────────────────────────────────────────
+On left sidebar, click: "Files"
+Click: "File Manager"
+Navigate to: domains/api2.valuehills.shop/public_html
+At the top, click: "Terminal" button
+
+In the terminal, type these commands (press Enter after each):
+
+npx prisma generate --schema=backend/prisma/schema.prisma
+
+npx prisma db push --schema=backend/prisma/schema.prisma
+
+node backend/prisma/seed.js
+
+Wait for each to complete (you'll see ✔ checkmarks)
+
+STEP 7: RESTART AGAIN
+───────────────────────────────────────────────────────────
+Go back to: Website → api2.valuehills.shop
+Click "Restart" button again
+Wait 20 seconds
+
+STEP 8: TEST
+───────────────────────────────────────────────────────────
+Open new browser tab
+Go to: https://api2.valuehills.shop/api/health
+
+You should see:
+{
+  "status": "ok",
+  "database": "connected"
+}
+
+If you see this: 🎉 SUCCESS! Your app is live!
+
+═══════════════════════════════════════════════════════════
+
+🎯 TOTAL TIME: 5-10 minutes
+📱 DO IT NOW while following these steps!

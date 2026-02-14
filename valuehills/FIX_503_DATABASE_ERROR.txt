@@ -1,0 +1,100 @@
+========================================
+FIX: Database Connection Failed Error
+========================================
+
+CURRENT ERROR:
+{
+  "error": "Service Unavailable",
+  "message": "Database connection failed"
+}
+
+CAUSE:
+MySQL database not initialized on Hostinger server
+
+========================================
+SOLUTION (3 Simple Steps)
+========================================
+
+STEP 1: SSH into Hostinger
+---------------------------
+ssh your-username@your-server
+cd domains/api2.valuehills.shop/public_html
+
+STEP 2: Initialize Database
+----------------------------
+npx prisma db push --accept-data-loss
+npm run seed
+
+STEP 3: Restart Application
+----------------------------
+pm2 restart all
+
+DONE! Test: https://api2.valuehills.shop/api/health
+
+========================================
+IF MYSQL DATABASE DOESN'T EXIST
+========================================
+
+Option A: Via Hostinger Control Panel
+--------------------------------------
+1. Go to Hostinger → Databases → MySQL
+2. Create database: u948761456_idera
+3. User: u948761456_videra
+4. Password: Videra@2025
+5. Then run STEP 2 and 3 above
+
+Option B: Via MySQL Command Line
+---------------------------------
+mysql -u u948761456_videra -p
+(enter password: Videra@2025)
+
+CREATE DATABASE u948761456_idera;
+exit
+
+Then run STEP 2 and 3 above
+
+========================================
+QUICK CHECK
+========================================
+
+After running the commands, test these URLs:
+
+✓ https://api2.valuehills.shop/api/health
+  Should return: {"status":"up",...}
+
+✓ https://api2.valuehills.shop/debug/db
+  Should return: {"status":"connected",...}
+
+✓ https://api2.valuehills.shop/
+  Should return: {"status":"ok",...}
+
+========================================
+TROUBLESHOOTING
+========================================
+
+Error: "Access denied"
+→ Wrong MySQL credentials
+→ Check Hostinger MySQL panel for correct credentials
+
+Error: "Unknown database"
+→ Database doesn't exist
+→ Create it via Hostinger panel or MySQL CLI
+
+Error: "npx: command not found"
+→ Node.js not installed or not in PATH
+→ Contact Hostinger support
+
+========================================
+NEED MORE HELP?
+========================================
+
+See detailed guides:
+- FIX_DATABASE_CONNECTION.md
+- SSH_COMMANDS.txt
+- DEPLOY_TO_HOSTINGER_NOW.md
+
+Or run the automated script:
+chmod +x hostinger-init.sh
+./hostinger-init.sh
+
+========================================

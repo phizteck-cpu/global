@@ -1,0 +1,74 @@
+═══════════════════════════════════════════════════════════
+  DATABASE AUTHENTICATION ERROR - FIX NOW
+═══════════════════════════════════════════════════════════
+
+ERROR: Authentication failed for database u948761456_value1
+
+CAUSE: Wrong MySQL credentials in DATABASE_URL
+
+═══════════════════════════════════════════════════════════
+  STEP 1: GET CORRECT MYSQL CREDENTIALS
+═══════════════════════════════════════════════════════════
+
+1. Login to Hostinger hPanel
+2. Go to: Databases → MySQL Databases
+3. Find your database (u948761456_hills or u948761456_value1)
+4. Note: Username, Password, Database Name
+
+═══════════════════════════════════════════════════════════
+  STEP 2: UPDATE ENVIRONMENT VARIABLE IN HOSTINGER
+═══════════════════════════════════════════════════════════
+
+Go to: Node.js App → Environment Variables
+
+Set DATABASE_URL to:
+
+mysql://USERNAME:PASSWORD@127.0.0.1:3306/DATABASE_NAME
+
+EXAMPLE:
+mysql://u948761456_value1:Mega4%24v%401@127.0.0.1:3306/u948761456_hills
+
+IMPORTANT: URL-encode special characters in password:
+@ → %40
+$ → %24
+! → %21
+# → %23
+
+═══════════════════════════════════════════════════════════
+  STEP 3: SSH INTO HOSTINGER AND INITIALIZE DATABASE
+═══════════════════════════════════════════════════════════
+
+cd /path/to/your/app
+
+npx prisma db push --schema=backend/prisma/schema.prisma
+
+node backend/prisma/seed.js
+
+═══════════════════════════════════════════════════════════
+  STEP 4: RESTART APP IN HOSTINGER
+═══════════════════════════════════════════════════════════
+
+Click "Restart" button in Hostinger control panel
+
+═══════════════════════════════════════════════════════════
+  STEP 5: TEST
+═══════════════════════════════════════════════════════════
+
+https://api2.valuehills.shop/api/health
+
+Expected: {"status":"ok","database":"connected"}
+
+═══════════════════════════════════════════════════════════
+  ALTERNATIVE: USE SQLITE (SIMPLER)
+═══════════════════════════════════════════════════════════
+
+If MySQL is too complex, use SQLite instead:
+
+1. Set DATABASE_URL=file:./backend/prisma/prod.db
+2. Edit backend/prisma/schema.prisma: provider = "sqlite"
+3. Run: npx prisma db push && node backend/prisma/seed.js
+4. Restart app
+
+═══════════════════════════════════════════════════════════
+
+🎯 ACTION REQUIRED: Get MySQL credentials from Hostinger!

@@ -1,0 +1,60 @@
+═══════════════════════════════════════════════════════════
+  HOSTINGER DEPLOYMENT FIX - READY TO DEPLOY
+═══════════════════════════════════════════════════════════
+
+✅ PROBLEM FIXED:
+   - Created server.js in root (matches Hostinger config)
+   - Updated package.json scripts
+   - Prisma schema path corrected
+
+═══════════════════════════════════════════════════════════
+  STEP 1: PUSH TO GITHUB
+═══════════════════════════════════════════════════════════
+
+git add .
+git commit -m "Fix: Add server.js for Hostinger deployment"
+git push origin main
+
+═══════════════════════════════════════════════════════════
+  STEP 2: HOSTINGER WILL AUTO-DEPLOY
+═══════════════════════════════════════════════════════════
+
+Your configuration is already correct:
+✓ Entry file: server.js
+✓ Root directory: ./
+✓ Framework: Express
+✓ Node: 20.x
+
+═══════════════════════════════════════════════════════════
+  STEP 3: SSH INTO HOSTINGER & INITIALIZE DATABASE
+═══════════════════════════════════════════════════════════
+
+After deployment completes, SSH in and run:
+
+npm run init-db
+
+Or manually:
+npx prisma db push --schema=backend/prisma/schema.prisma
+node backend/prisma/seed.js
+
+═══════════════════════════════════════════════════════════
+  STEP 4: TEST YOUR API
+═══════════════════════════════════════════════════════════
+
+https://api2.valuehills.shop/api/health
+
+Expected: {"status":"ok","database":"connected"}
+
+═══════════════════════════════════════════════════════════
+  ENVIRONMENT VARIABLES (Set in Hostinger Panel)
+═══════════════════════════════════════════════════════════
+
+NODE_ENV=production
+PORT=5000
+DATABASE_URL=file:./backend/prisma/prod.db
+JWT_SECRET=your-secret-key-here
+FRONTEND_URL=https://valuehills.shop
+
+═══════════════════════════════════════════════════════════
+
+🎉 YOU'RE READY TO DEPLOY!

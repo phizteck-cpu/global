@@ -1,0 +1,61 @@
+========================================
+RUN THESE COMMANDS VIA SSH
+========================================
+
+1. Connect to your Hostinger server:
+   ssh your-username@your-server
+
+2. Navigate to your application:
+   cd domains/api2.valuehills.shop/public_html
+
+3. Run these commands ONE BY ONE:
+
+   npx prisma generate
+   
+   npx prisma db push --accept-data-loss
+   
+   npm run seed
+   
+   pm2 restart all
+
+4. Test your API:
+   https://api2.valuehills.shop/api/health
+
+========================================
+ALTERNATIVE: Use the init script
+========================================
+
+After connecting via SSH:
+
+cd domains/api2.valuehills.shop/public_html
+chmod +x hostinger-init.sh
+./hostinger-init.sh
+
+========================================
+IF DATABASE DOESN'T EXIST
+========================================
+
+Create it via MySQL command line:
+
+mysql -u u948761456_videra -p
+(password: Videra@2025)
+
+CREATE DATABASE u948761456_idera;
+exit
+
+Then run the commands above.
+
+========================================
+OR CREATE VIA HOSTINGER PANEL
+========================================
+
+1. Go to Hostinger control panel
+2. Navigate to "Databases" → "MySQL Databases"
+3. Create new database:
+   - Name: u948761456_idera
+   - User: u948761456_videra
+   - Password: Videra@2025
+
+Then run the commands above.
+
+========================================

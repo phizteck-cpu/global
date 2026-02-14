@@ -1,0 +1,32 @@
+# Deploy Backend API Now
+
+Run these commands **IN YOUR SERVER'S SSH TERMINAL**:
+
+```bash
+# Step 1: Navigate to backend directory
+cd /home/admin/web/domains/1api.valuehills.shop/public_html
+
+# Step 2: Install dependencies
+npm install
+
+# Step 3: Generate Prisma client
+npx prisma generate
+
+# Step 4: Deploy database migrations
+npx prisma migrate deploy
+
+# Step 5: Start PM2 process
+pm2 delete all
+pm2 start index.js --name valuehills-api
+pm2 save
+pm2 startup
+
+# Step 6: Check if running
+pm2 status
+```
+
+You should see `valuehills-api` with status "online".
+
+---
+
+**Important:** Make sure your database is imported first using phpMyAdmin!

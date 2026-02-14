@@ -1,0 +1,117 @@
+╔═══════════════════════════════════════════════════════════╗
+║         🚨 URGENT: DATABASE AUTHENTICATION FAILED         ║
+╚═══════════════════════════════════════════════════════════╝
+
+ERROR MESSAGE:
+"Authentication failed for u948761456_value1 at 127.0.0.1"
+
+PROBLEM:
+Your MySQL password in DATABASE_URL is incorrect.
+
+╔═══════════════════════════════════════════════════════════╗
+║                    FIX IT NOW - 3 STEPS                   ║
+╚═══════════════════════════════════════════════════════════╝
+
+STEP 1: GET YOUR MYSQL PASSWORD FROM HOSTINGER
+───────────────────────────────────────────────────────────
+
+1. Login to Hostinger hPanel
+2. Click "Databases" in left menu
+3. Click "MySQL Databases"
+4. Find database: u948761456_hills (or u948761456_value1)
+5. Click on it to see details
+6. If you don't know password, click "Reset Password"
+7. COPY the password (write it down!)
+
+STEP 2: UPDATE DATABASE_URL IN HOSTINGER
+───────────────────────────────────────────────────────────
+
+1. In Hostinger, go to your Node.js application
+2. Click "Environment Variables" tab
+3. Find DATABASE_URL (or add it if missing)
+4. Update it with this format:
+
+   mysql://USERNAME:PASSWORD@127.0.0.1:3306/DATABASE_NAME
+
+   Replace:
+   - USERNAME: Your MySQL username (probably u948761456_value1)
+   - PASSWORD: The password you got from Step 1
+   - DATABASE_NAME: Your database name (probably u948761456_hills)
+
+   EXAMPLE:
+   mysql://u948761456_value1:MyPass123@127.0.0.1:3306/u948761456_hills
+
+   ⚠️ IMPORTANT: If password has special characters, encode them:
+   @ → %40
+   $ → %24
+   ! → %21
+   # → %23
+   % → %25
+
+   Example: Mega4$v@1 becomes Mega4%24v%401
+
+5. Click "Save"
+
+STEP 3: INITIALIZE DATABASE VIA SSH
+───────────────────────────────────────────────────────────
+
+1. SSH into your Hostinger server
+2. Navigate to your app folder:
+   cd /home/u948761456/domains/api2.valuehills.shop/public_html
+
+3. Run these commands:
+
+   npx prisma db push --schema=backend/prisma/schema.prisma
+
+   node backend/prisma/seed.js
+
+4. Restart your app in Hostinger control panel
+
+STEP 4: TEST
+───────────────────────────────────────────────────────────
+
+Visit: https://api2.valuehills.shop/api/health
+
+Should see: {"status":"ok","database":"connected"}
+
+╔═══════════════════════════════════════════════════════════╗
+║              ALTERNATIVE: USE SQLITE INSTEAD              ║
+╚═══════════════════════════════════════════════════════════╝
+
+If MySQL is giving you trouble, switch to SQLite:
+
+1. In Hostinger Environment Variables, set:
+   DATABASE_URL=file:./backend/prisma/prod.db
+
+2. SSH into server and edit schema:
+   nano backend/prisma/schema.prisma
+   
+   Change line 7 from:
+   provider = "mysql"
+   
+   To:
+   provider = "sqlite"
+   
+   Save (Ctrl+O, Enter, Ctrl+X)
+
+3. Initialize database:
+   npx prisma db push --schema=backend/prisma/schema.prisma
+   node backend/prisma/seed.js
+
+4. Restart app in Hostinger
+
+╔═══════════════════════════════════════════════════════════╗
+║                      WHAT TO DO NOW                       ║
+╚═══════════════════════════════════════════════════════════╝
+
+Choose ONE option:
+
+OPTION A (Recommended): Fix MySQL credentials
+→ Follow STEP 1-4 above
+
+OPTION B (Easier): Switch to SQLite
+→ Follow ALTERNATIVE steps above
+
+╔═══════════════════════════════════════════════════════════╗
+
+🎯 ACTION REQUIRED: Get MySQL password from Hostinger now!
