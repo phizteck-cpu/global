@@ -64,6 +64,27 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// Explicit CORS headers for preflight requests
+app.options('*', (req, res) => {
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+        'https://valuehills.shop',
+        'https://www.valuehills.shop',
+        'https://1api.valuehills.shop',
+        'https://api2.valuehills.shop',
+        'https://valuehills.pages.dev',
+        'http://localhost:5173'
+    ];
+    
+    if (!origin || allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin || '*');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+    res.status(204).end();
+});
 app.use(express.json());
 
 // Security Headers (API-only mode - minimal headers)
