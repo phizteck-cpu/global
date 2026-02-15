@@ -6,7 +6,7 @@
     "type": "module",
     "scripts": {
         "start": "node server.js",
-        "postinstall": "npx prisma generate --schema=backend/prisma/schema.prisma",
+        "postinstall": "npx prisma generate --schema=prisma/schema.prisma && npx prisma generate --schema=backend/prisma/schema.prisma",
         "start:prod": "node server.js",
         "dev": "node --watch server.js",
         "test": "cd backend && cross-env NODE_ENV=test npx prisma db push --force-reset && cross-env NODE_ENV=test jest --runInBand --forceExit",
